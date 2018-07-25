@@ -179,7 +179,8 @@ _export:
 
 # Note
 
-- only emr-5.10.0 or larger releases are supported
+- Only emr-5.10.0 or larger releases are supported.
+- There is no compatibility against [`emr>` operator](https://docs.digdag.io/operators/emr.html) because of the maintainability.
 
 # Development
 
