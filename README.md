@@ -21,20 +21,19 @@ _export:
 +task1:
   emr_fleet.create_cluster>:
     name: my-cluster
-    instances:
-      master:
-        candidates:
-          - instance_type: r4.xlarge
-          - instance_type: m5.xlarge
-      core:
-        target_capacity: 128
-        candidates:
-          - instance_type: r4.8xlarge
-            spot_units: 32
-          - instance_type: r4.16xlarge
-            spot_units: 64
-          - instance_type: r4.4xlarge
-            spot_units: 16
+    master:
+      candidates:
+        - instance_type: r4.xlarge
+        - instance_type: m5.xlarge
+    core:
+      target_capacity: 128
+      candidates:
+        - instance_type: r4.8xlarge
+          spot_units: 32
+        - instance_type: r4.16xlarge
+          spot_units: 64
+        - instance_type: r4.4xlarge
+          spot_units: 16
     release_label: emr-5.16.0
     applications:
       - Hadoop
