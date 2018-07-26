@@ -6,7 +6,6 @@ import io.digdag.util.BaseOperator
 import org.slf4j.{Logger, LoggerFactory}
 
 abstract class AbstractEmrFleetOperator(
-  operatorName: String,
   context: OperatorContext,
   systemConfig: Config,
   templateEngine: TemplateEngine
