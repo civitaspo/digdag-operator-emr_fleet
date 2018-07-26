@@ -60,20 +60,26 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **emr_fleet.allow_auth_method_env**: Indicates whether users can use **auth_method** `"env"` (boolean, default: `false`)
 - **emr_fleet.allow_auth_method_instance**: Indicates whether users can use **auth_method** `"instance"` (boolean, default: `false`)
 - **emr_fleet.allow_auth_method_profile**: Indicates whether users can use **auth_method** `"profile"` (boolean, default: `false`)
+- **emr_fleet.allow_auth_method_properties**: Indicates whether users can use **auth_method** `"properties"` (boolean, default: `false`)
+- **emr_fleet.assume_role_timeout_seconds**: Maximum Seconds which server administer allows when users assume **role_arn**. (integer, default: `3600`)
 
 ### Secrets
 
 - **emr_fleet.access_key_id**: The AWS Access Key ID to use when submitting EMR jobs. (optional)
 - **emr_fleet.secret_access_key**: The AWS Secret Access Key to use when submitting EMR jobs. (optional)
+- **emr_fleet.session_token**: The AWS session token to use when submitting EMR jobs. This is used only **auth_method** is `"session"` (optional)
 - **emr_fleet.role_arn**: The AWS Role to assume when submitting EMR jobs. (optional)
-- **emr_fleet.region**: The AWS region to use for EMR service. (optional)
+- **emr_fleet.role_session_name**: The AWS Role Session Name when assuming the role. (default: `digdag-emr_fleet-${session_uuid}`)
+- **emr_fleet.http_proxy.host**: proxy host (required if **use_http_proxy** is `true`)
+- **emr_fleet.http_proxy.port** proxy port (optional)
+- **emr_fleet.http_proxy.scheme** `"https"` or `"http"` (default: `"https"`)
+- **emr_fleet.http_proxy.user** proxy user (optional)
+- **emr_fleet.http_proxy.password**: http proxy password (optional)
 
 ### Options
 
 - **auth_method**: name of mechanism to authenticate requests (`"basic"`, `"env"`, `"instance"`, `"profile"`, `"properties"`, `"anonymous"`, or `"session"`. default: `"basic"`)
   - `"basic"`: uses access_key_id and secret_access_key to authenticate.
-    - **access_key_id**: AWS access key ID (string, default: **emr_fleet.access_key_id**)
-    - **secret_access_key**: AWS secret access key (string, default: **emr_fleet.secret_access_key**)
   - `"env"`: uses AWS_ACCESS_KEY_ID (or AWS_ACCESS_KEY) and AWS_SECRET_KEY (or AWS_SECRET_ACCESS_KEY) environment variables.
   - `"instance"`: uses EC2 instance profile.
   - `"profile"`: uses credentials written in a file. Format of the file is as following, where `[...]` is a name of profile.
@@ -82,16 +88,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - `"properties"`: uses aws.accessKeyId and aws.secretKey Java system properties.
   - `"anonymous"`: uses anonymous access. This auth method can access only public files.
   - `"session"`: uses temporary-generated access_key_id, secret_access_key and session_token.
-    - **access_key_id**: AWS access key ID (string, default: **emr_fleet.access_key_id**)
-    - **secret_access_key**: AWS secret access key (string, default: **emr_fleet.secret_access_key**)
-    - **session_token**: session token (string, required)
-- **http_proxy** http proxy configuration to use when accessing AWS via http proxy. (optional)
-  - **host** proxy host (string, required)
-  - **port** proxy port (int, optional)
-  - **https** use https or not (boolean, default true)
-  - **user** proxy user (string, optional)
-  - **password** proxy password (string, optional)
-- **role_arn**: The AWS Role to assume when submitting EMR jobs. (string, optional)
+- **use_http_proxy**: Indicate whether using when accessing AWS via http proxy. (boolean, default: `false`)
 - **region**: The AWS region to use for EMR service. (string, optional)
 - **endpoint**: The AWS EMR endpoint address to use. (string, optional)
 
