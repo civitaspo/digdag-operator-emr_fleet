@@ -53,6 +53,14 @@ _export:
 
 ## Common Configuration
 
+### System Options
+
+Define the below options on properties (which is indicated by `-c`, `--config`).
+
+- **emr_fleet.allow_auth_method_env**: Indicates whether users can use **auth_method** `"env"` (boolean, default: `false`)
+- **emr_fleet.allow_auth_method_instance**: Indicates whether users can use **auth_method** `"instance"` (boolean, default: `false`)
+- **emr_fleet.allow_auth_method_profile**: Indicates whether users can use **auth_method** `"profile"` (boolean, default: `false`)
+
 ### Secrets
 
 - **emr_fleet.access_key_id**, **aws.access_key_id**: The AWS Access Key ID to use when submitting EMR jobs. (optional)
@@ -86,7 +94,6 @@ _export:
 - **role_arn**: The AWS Role to assume when submitting EMR jobs. (string, optional)
 - **region**: The AWS region to use for EMR service. (string, optional)
 - **endpoint**: The AWS EMR endpoint address to use. (string, optional)
-
 
 ## Configuration for `emr_fleet.create_cluster>` operator
 
