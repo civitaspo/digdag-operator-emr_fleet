@@ -6,7 +6,7 @@ import java.lang.reflect.Constructor
 import io.digdag.client.config.Config
 import io.digdag.spi.{Operator, OperatorContext, OperatorFactory, OperatorProvider, Plugin, TemplateEngine}
 import javax.inject.Inject
-import pro.civitaspo.digdag.plugin.emr_fleet.operator.{AbstractEmrFleetOperator, EmrFleetListClustersOperator}
+import pro.civitaspo.digdag.plugin.emr_fleet.operator.{AbstractEmrFleetOperator, EmrFleetDetectClustersOperator}
 
 object EmrFleetPlugin {
 
@@ -17,7 +17,7 @@ object EmrFleetPlugin {
 
     override def get(): util.List[OperatorFactory] = {
       util.Arrays.asList(
-        operatorFactory("emr_fleet.list_clusters", classOf[EmrFleetListClustersOperator])
+        operatorFactory("emr_fleet.detect_clusters", classOf[EmrFleetDetectClustersOperator])
       )
     }
 
