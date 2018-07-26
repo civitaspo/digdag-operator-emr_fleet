@@ -63,17 +63,17 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Secrets
 
-- **emr_fleet.access_key_id**, **aws.access_key_id**: The AWS Access Key ID to use when submitting EMR jobs. (optional)
-- **emr_fleet.secret_access_key**, **aws.secret_access_key**: The AWS Secret Access Key to use when submitting EMR jobs. (optional)
-- **emr_fleet.role_arn**, **aws.role_arn**: The AWS Role to assume when submitting EMR jobs. (optional)
-- **emr_fleet.region**, **aws.region**: The AWS region to use for EMR service. (optional)
+- **emr_fleet.access_key_id**: The AWS Access Key ID to use when submitting EMR jobs. (optional)
+- **emr_fleet.secret_access_key**: The AWS Secret Access Key to use when submitting EMR jobs. (optional)
+- **emr_fleet.role_arn**: The AWS Role to assume when submitting EMR jobs. (optional)
+- **emr_fleet.region**: The AWS region to use for EMR service. (optional)
 
 ### Options
 
 - **auth_method**: name of mechanism to authenticate requests (`"basic"`, `"env"`, `"instance"`, `"profile"`, `"properties"`, `"anonymous"`, or `"session"`. default: `"basic"`)
   - `"basic"`: uses access_key_id and secret_access_key to authenticate.
-    - **access_key_id**: AWS access key ID (string, default: **emr_fleet.access_key_id** or **aws.access_key_id**)
-    - **secret_access_key**: AWS secret access key (string, default: **emr_fleet.secret_access_key** or **aws.secret_access_key**)
+    - **access_key_id**: AWS access key ID (string, default: **emr_fleet.access_key_id**)
+    - **secret_access_key**: AWS secret access key (string, default: **emr_fleet.secret_access_key**)
   - `"env"`: uses AWS_ACCESS_KEY_ID (or AWS_ACCESS_KEY) and AWS_SECRET_KEY (or AWS_SECRET_ACCESS_KEY) environment variables.
   - `"instance"`: uses EC2 instance profile.
   - `"profile"`: uses credentials written in a file. Format of the file is as following, where `[...]` is a name of profile.
@@ -82,8 +82,8 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - `"properties"`: uses aws.accessKeyId and aws.secretKey Java system properties.
   - `"anonymous"`: uses anonymous access. This auth method can access only public files.
   - `"session"`: uses temporary-generated access_key_id, secret_access_key and session_token.
-    - **access_key_id**: AWS access key ID (string, default: **emr_fleet.access_key_id** or **aws.access_key_id**)
-    - **secret_access_key**: AWS secret access key (string, default: **emr_fleet.secret_access_key** or **aws.secret_access_key**)
+    - **access_key_id**: AWS access key ID (string, default: **emr_fleet.access_key_id**)
+    - **secret_access_key**: AWS secret access key (string, default: **emr_fleet.secret_access_key**)
     - **session_token**: session token (string, required)
 - **http_proxy** http proxy configuration to use when accessing AWS via http proxy. (optional)
   - **host** proxy host (string, required)
