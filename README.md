@@ -168,13 +168,47 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Output parameters
 
-- **emr_fleet.last_cluster.id**: The ID of the cluster created.
+- **emr_fleet.create_cluster.last_cluster.id**: The ID of the cluster created. (string)
 
 ## Configuration for `emr_fleet.shutdown_cluster>` operator
 
 ### Options
 
 - **cluster_id**: Specifies either the ID of an existing cluster (string, required)
+
+## Configuration for `emr_fleet.detect_clusters>` operator
+
+### Options
+
+- **hours_created_within**: Number of hours clusters created within. (integer, required)
+- **regexp**: Regular expression to filter listing clusters. (string, default: `".*"`)
+- **states**: The cluster state filters to apply when listing clusters. (array of string, default: `["RUNNING", "WAITING"]`)  
+
+### Output parameters
+
+- **emr_fleet.detect_clusters.is_detected**: Detected or not. (boolean)
+- **emr_fleet.detect_clusters.last_detected_clusters**:  Last detected clusters' information. (array of map)
+  ```json
+  [ 
+      { 
+          "id": "string",
+          "name": "string",
+          "normalized_instance_hours": number,
+          "status": { 
+              "state": "string",
+              "state_change_reason": { 
+                  "code": "string",
+                  "message": "string"
+              },
+              "timeline": { 
+                  "created_at": number,
+                  "end_at": number,
+                  "ready_at": number
+              }
+          }
+      }
+  ]
+  ```
 
 # TODOs
 
