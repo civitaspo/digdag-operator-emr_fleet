@@ -178,7 +178,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Options
 
-- **cluster_id**: Specifies either the ID of an existing cluster (string, required)
+- **emr_fleet.shutdown_cluster>**: Specifies either the ID of an existing cluster (string, required)
 
 ## Configuration for `emr_fleet.detect_clusters>` operator
 
