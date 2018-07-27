@@ -28,10 +28,17 @@ class EmrFleetDetectClustersOperator(
   override def runTask(): TaskResult = {
     val clusters = detectClusters()
 
+    val isDetected = clusters.nonEmpty
+    val detectedClusterSummaries = clusters.map {cs =>
+      val p = clusterSummaryToStoreParams(cs)
+      logger.info(s"detected => ${p}")
+      p
+    }
+
     val p = newEmptyParams
     val lastDetection = p.getNestedOrSetEmpty("emr_fleet").getNestedOrSetEmpty("last_detection")
-    lastDetection.set("is_detected", clusters.nonEmpty)
-    lastDetection.set("clusters", seqAsJavaList(clusters.map(clusterSummaryToDetectedClusterSummary)))
+    lastDetection.set("is_detected", isDetected)
+    lastDetection.set("clusters", seqAsJavaList(detectedClusterSummaries))
 
     val builder = TaskResult.defaultBuilder(request)
     builder.storeParams(p)
@@ -39,7 +46,7 @@ class EmrFleetDetectClustersOperator(
     builder.build()
   }
 
-  private def clusterSummaryToDetectedClusterSummary(cs: ClusterSummary): Config = {
+  private def clusterSummaryToStoreParams(cs: ClusterSummary): Config = {
     val p = newEmptyParams
     p.set("id", cs.getId)
     p.set("name", cs.getName)
