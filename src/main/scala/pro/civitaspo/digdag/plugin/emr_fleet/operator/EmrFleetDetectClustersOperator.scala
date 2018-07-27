@@ -48,8 +48,14 @@ class EmrFleetDetectClustersOperator(
     p.set("last_state_change_reason_code", cs.getStatus.getStateChangeReason.getCode)
     p.set("last_state_change_reason_message", cs.getStatus.getStateChangeReason.getMessage)
     p.set("created_at", cs.getStatus.getTimeline.getCreationDateTime.getTime)
-    p.set("end_at", cs.getStatus.getTimeline.getEndDateTime.getTime)
-    p.set("ready_at", cs.getStatus.getTimeline.getReadyDateTime.getTime)
+    p.set("end_at", Option(cs.getStatus.getTimeline.getEndDateTime) match {
+      case Some(x) => x.getTime
+      case None => null
+    })
+    p.set("ready_at", Option(cs.getStatus.getTimeline.getReadyDateTime) match {
+      case Some(x) => x.getTime
+      case None => null
+    })
     p
   }
 
