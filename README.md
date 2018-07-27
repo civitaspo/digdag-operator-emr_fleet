@@ -39,8 +39,12 @@ _export:
     - Hadoop
     - Spark
     - Livy
-
+    
 +task2:
+  emr_fleet.detect_clusters>:
+  hours_created_within: 3
+
++task3:
   emr_fleet.shutdown_cluster>: ${emr_fleet.last_cluster.id}
 
 ```
@@ -230,6 +234,9 @@ Artifacts are build on local repos: `./build/repo`.
 
 ```sh
 digdag selfupdate
+
+## Remove cache 
+rm -rf .digdag
 
 digdag run --project sample plugin.dig -p repos=`pwd`/build/repo
 ```
