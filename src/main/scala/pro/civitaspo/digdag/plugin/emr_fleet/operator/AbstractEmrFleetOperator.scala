@@ -4,7 +4,7 @@ import com.amazonaws.{ClientConfiguration, Protocol}
 import com.amazonaws.auth.{AnonymousAWSCredentials, AWSCredentials, AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicAWSCredentials, BasicSessionCredentials, EC2ContainerCredentialsProviderWrapper, EnvironmentVariableCredentialsProvider, SystemPropertiesCredentialsProvider}
 import com.amazonaws.auth.profile.{ProfileCredentialsProvider, ProfilesConfigFile}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
-import com.amazonaws.regions.Regions
+import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.elasticmapreduce.{AmazonElasticMapReduce, AmazonElasticMapReduceClientBuilder}
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
@@ -13,6 +13,8 @@ import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{OperatorContext, SecretProvider, TemplateEngine}
 import io.digdag.util.BaseOperator
 import org.slf4j.{Logger, LoggerFactory}
+
+import scala.util.Try
 
 abstract class AbstractEmrFleetOperator(
   context: OperatorContext,
@@ -48,11 +50,24 @@ abstract class AbstractEmrFleetOperator(
   protected val endpoint: Optional[String] = params.getOptional("endpoint", classOf[String])
 
   protected lazy val emr: AmazonElasticMapReduce = {
-    AmazonElasticMapReduceClientBuilder.standard()
+    val builder = AmazonElasticMapReduceClientBuilder.standard()
       .withClientConfiguration(clientConfiguration)
-      .withEndpointConfiguration(endpointConfiguration)
       .withCredentials(credentialsProvider)
-      .build()
+
+    if (region.isPresent && endpoint.isPresent) {
+      val ec = new EndpointConfiguration(endpoint.get(), region.get())
+      builder.setEndpointConfiguration(ec)
+    }
+    else if (region.isPresent && !endpoint.isPresent) {
+      builder.setRegion(region.get())
+    }
+    else if (!region.isPresent && endpoint.isPresent) {
+      val r = Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName)
+      val ec = new EndpointConfiguration(endpoint.get(), r)
+      builder.setEndpointConfiguration(ec)
+    }
+
+    builder.build()
   }
 
   protected def newEmptyParams: Config = {
@@ -165,13 +180,6 @@ abstract class AbstractEmrFleetOperator(
     if (password.isPresent) cc.setProxyPassword(password.get())
 
     cc
-  }
-
-  private def endpointConfiguration: EndpointConfiguration = {
-    new EndpointConfiguration(
-      endpoint.or(Regions.getCurrentRegion.getServiceEndpoint(AmazonElasticMapReduce.ENDPOINT_PREFIX)),
-      region.or(Regions.getCurrentRegion.getName)
-    )
   }
 
 }
