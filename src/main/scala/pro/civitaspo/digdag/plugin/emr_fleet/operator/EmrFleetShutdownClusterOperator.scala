@@ -13,7 +13,7 @@ class EmrFleetShutdownClusterOperator(
   val clusterId: String = params.get("_command", classOf[String])
 
   override def runTask(): TaskResult = {
-    emr.terminateJobFlows(new TerminateJobFlowsRequest().withJobFlowIds(clusterId))
+    withEmr(_.terminateJobFlows(new TerminateJobFlowsRequest().withJobFlowIds(clusterId)))
     logger.info(s"Shutdown => Id: $clusterId")
     TaskResult.empty(request)
   }
