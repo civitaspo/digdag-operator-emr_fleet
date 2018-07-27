@@ -1,6 +1,5 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
-import java.time.{LocalDateTime, ZoneId, ZoneOffset}
 import java.util.Date
 
 import com.amazonaws.services.elasticmapreduce.model.{ClusterState, ClusterSummary, ListClustersRequest, ListClustersResult}
@@ -74,14 +73,7 @@ class EmrFleetDetectClustersOperator(
   }
 
   private def createdAfter: Date = {
-    val zoneId = ZoneId.of(timezone)
-    val zoneOffset = ZoneOffset.of(zoneId.toString)
-    val i = LocalDateTime.now(zoneId)
-      .minusHours(hoursCreatedWithin)
-      .toEpochSecond(zoneOffset)
-    new Date(i * 1000)  // millis
+    val minusMillis: Long = hoursCreatedWithin * 3600 * 1000
+    new Date(System.currentTimeMillis() - minusMillis)
   }
-
-
-
 }
