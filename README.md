@@ -186,26 +186,20 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Output parameters
 
-- **emr_fleet.detect_clusters.is_detected**: Detected or not. (boolean)
-- **emr_fleet.detect_clusters.last_detected_clusters**:  Last detected clusters' information. (array of map)
+- **emr_fleet.last_detection.is_detected**: Detected or not. (boolean)
+- **emr_fleet.last_detection.clusters**:  Last detected clusters' information. (array of map)
   ```json
   [ 
       { 
           "id": "string",
           "name": "string",
           "normalized_instance_hours": number,
-          "status": { 
-              "state": "string",
-              "state_change_reason": { 
-                  "code": "string",
-                  "message": "string"
-              },
-              "timeline": { 
-                  "created_at": number,
-                  "end_at": number,
-                  "ready_at": number
-              }
-          }
+          "current_state": "string",
+          "last_state_change_reason_code": "string",
+          "last_state_change_reason_message":"string",
+          "created_at": number,
+          "end_at": number,
+          "ready_at": number
       }
   ]
   ```
