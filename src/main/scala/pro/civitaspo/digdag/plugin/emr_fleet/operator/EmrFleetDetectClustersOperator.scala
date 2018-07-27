@@ -74,7 +74,7 @@ class EmrFleetDetectClustersOperator(
       case Some(x) => req.setMarker(x)
       case None =>  // Do nothing
     }
-    val result: ListClustersResult = emr.listClusters(req)
+    val result: ListClustersResult = withEmr(_.listClusters(req))
     val builder = Seq.newBuilder[ClusterSummary]
     for (cs: ClusterSummary <- result.getClusters.asScala if cs.getName.matches(regexp)) builder += cs
 

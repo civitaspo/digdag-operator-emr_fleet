@@ -178,7 +178,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Options
 
-- **cluster_id**: Specifies either the ID of an existing cluster (string, required)
+- **emr_fleet.shutdown_cluster>**: Specifies either the ID of an existing cluster (string, required)
 
 ## Configuration for `emr_fleet.detect_clusters>` operator
 
@@ -186,7 +186,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 - **hours_created_within**: Number of hours clusters created within. (integer, required)
 - **regexp**: Regular expression to filter listing clusters. (string, default: `".*"`)
-- **states**: The cluster state filters to apply when listing clusters. (array of string, default: `["RUNNING", "WAITING"]`)  
+- **states**: The cluster state filters to apply when listing clusters. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, default: `["RUNNING", "WAITING"]`)
 
 ### Output parameters
 

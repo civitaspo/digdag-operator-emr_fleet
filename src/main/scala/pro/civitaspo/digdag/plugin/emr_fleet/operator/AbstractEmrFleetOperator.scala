@@ -49,7 +49,21 @@ abstract class AbstractEmrFleetOperator(
   protected val region: Optional[String] = params.getOptional("region", classOf[String])
   protected val endpoint: Optional[String] = params.getOptional("endpoint", classOf[String])
 
-  protected lazy val emr: AmazonElasticMapReduce = {
+  protected def newEmptyParams: Config = {
+    request.getConfig.getFactory.create()
+  }
+
+  protected def withEmr[T](f: AmazonElasticMapReduce => T): T = {
+    val emr = buildEmr
+    try {
+      f(emr)
+    }
+    finally {
+      emr.shutdown()
+    }
+  }
+
+  private def buildEmr: AmazonElasticMapReduce = {
     val builder = AmazonElasticMapReduceClientBuilder.standard()
       .withClientConfiguration(clientConfiguration)
       .withCredentials(credentialsProvider)
@@ -68,10 +82,6 @@ abstract class AbstractEmrFleetOperator(
     }
 
     builder.build()
-  }
-
-  protected def newEmptyParams: Config = {
-    request.getConfig.getFactory.create()
   }
 
   private def credentialsProvider: AWSCredentialsProvider = {
