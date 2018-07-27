@@ -28,11 +28,11 @@ abstract class AbstractEmrFleetOperator(
   )
   protected val secrets: SecretProvider = context.getSecrets.getSecrets("emr_fleet")
 
-  protected val isAllowedAuthMethodEnv: Boolean = systemConfig.get("allow_auth_method_env", classOf[Boolean], false)
-  protected val isAllowedAuthMethodInstance: Boolean = systemConfig.get("allow_auth_method_instance", classOf[Boolean], false)
-  protected val isAllowedAuthMethodProfile: Boolean = systemConfig.get("allow_auth_method_profile", classOf[Boolean], false)
-  protected val isAllowedAuthMethodProperties: Boolean = systemConfig.get("allow_auth_method_properties", classOf[Boolean], false)
-  protected val assumeRoleTimeoutSeconds: Int = systemConfig.get("assume_role_timeout_seconds", classOf[Int], 3600)
+  protected val isAllowedAuthMethodEnv: Boolean = systemConfig.get("emr_fleet.allow_auth_method_env", classOf[Boolean], false)
+  protected val isAllowedAuthMethodInstance: Boolean = systemConfig.get("emr_fleet.allow_auth_method_instance", classOf[Boolean], false)
+  protected val isAllowedAuthMethodProfile: Boolean = systemConfig.get("emr_fleet.allow_auth_method_profile", classOf[Boolean], false)
+  protected val isAllowedAuthMethodProperties: Boolean = systemConfig.get("emr_fleet.allow_auth_method_properties", classOf[Boolean], false)
+  protected val assumeRoleTimeoutSeconds: Int = systemConfig.get("emr_fleet.assume_role_timeout_seconds", classOf[Int], 3600)
 
   protected val accessKeyId: Optional[String] = secrets.getSecretOptional("access_key_id")
   protected val secretAccessKey: Optional[String] = secrets.getSecretOptional("secret_access_key")
