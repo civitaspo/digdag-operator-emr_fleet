@@ -3,6 +3,7 @@ package pro.civitaspo.digdag.plugin.emr_fleet.operator
 import java.util
 import java.net.URI
 
+import com.amazonaws.services.elasticmapreduce.model.{EbsBlockDeviceConfig, EbsConfiguration, InstanceFleetConfig, InstanceFleetProvisioningSpecifications, InstanceFleetType, InstanceTypeConfig, SpotProvisioningSpecification, SpotProvisioningTimeoutAction, VolumeSpecification}
 import com.google.common.base.Optional
 import io.digdag.client.config.Config
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
@@ -39,6 +40,25 @@ class EmrFleetCreateClusterOperator(
   val bootstrapActions: Seq[Config] = params.getListOrEmpty("bootstrap_actions", classOf[Config]).asScala
   val keepAliveWhenNoSteps: Boolean = params.get("keep_alive_when_no_steps", classOf[Boolean], true)
   val terminationProtected: Boolean = params.get("termination_protected", classOf[Boolean], false)
+
+  def configureEbs(ebs: Config): EbsConfiguration = {
+    val isOptimized: Boolean = ebs.get("optimized", classOf[Boolean], true)
+    val iops: Optional[Int] = ebs.getOptional("iops", classOf[Int])
+    val size: Int = ebs.get("size", classOf[Int], 256)
+    val volumeType: String = ebs.get("type", classOf[String], "gp2")
+    val volumesPerInstance: Int = ebs.get("volumes_per_instance", classOf[Int], 1)
+
+    new EbsConfiguration()
+      .withEbsOptimized(isOptimized)
+      .withEbsBlockDeviceConfigs(new EbsBlockDeviceConfig()
+          .withVolumesPerInstance(volumesPerInstance)
+          .withVolumeSpecification(new VolumeSpecification()
+              .withIops(iops.orNull)
+              .withSizeInGB(size)
+              .withVolumeType(volumeType)
+          )
+      )
+  }
 
   override def runTask(): TaskResult = null
 }
