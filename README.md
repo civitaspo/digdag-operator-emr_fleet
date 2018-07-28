@@ -153,7 +153,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - The other options are the same as **task** option.
 - **log_uri**: The location in Amazon S3 to write the log files of the job flow. If a value is not provided, logs are not created. (string, optional)
 - **additional_info**: A JSON string for selecting additional features. (string, optional)
-- **is_visible**: Whether the cluster is visible to all IAM users of the AWS account associated with the cluster. If this value is set to true, all IAM users of that AWS account can view and (if they have the proper policy permissions set) manage the cluster. If it is set to false, only the IAM user that created the cluster can view and manage it. (boolean, default: `true`)
+- **visible**: Whether the cluster is visible to all IAM users of the AWS account associated with the cluster. If this value is set to true, all IAM users of that AWS account can view and (if they have the proper policy permissions set) manage the cluster. If it is set to false, only the IAM user that created the cluster can view and manage it. (boolean, default: `true`)
 - **security_configuration**: The name of a security configuration to apply to the cluster. (string, optional)
 - **instance_profile**: Also called job flow role and EC2 role. An IAM role for an EMR cluster. The EC2 instances of the cluster assume this role. The default role is EMR_EC2_DefaultRole. In order to use the default role, you must have already created it using the CLI or console. (string, default: `EMR_EC2_DefaultRole`)
 - **service_role**: The IAM role that will be assumed by the Amazon EMR service to access AWS resources on your behalf. (string, default: `EMR_DefaultRole`)

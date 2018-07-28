@@ -30,7 +30,7 @@ class EmrFleetCreateClusterOperator(
   val taskFleet: Config = params.getNestedOrGetEmpty("task_fleet")
   val logUri: Optional[URI] = params.getOptional("log_uri", classOf[URI])
   val additionalInfo: Optional[String] = params.getOptional("additional_info", classOf[String])
-  val isVisible: Boolean = params.get("is_visible", classOf[Boolean], true)
+  val isVisible: Boolean = params.get("visible", classOf[Boolean], true)
   val securityConfiguration: Optional[String] = params.getOptional("security_configuration", classOf[String])
   val instanceProfile: String = params.get("instance_profile", classOf[String], "EMR_EC2_DefaultRole")
   val serviceRole: String = params.get("service_role", classOf[String], "EMR_DefaultRole")
