@@ -16,7 +16,7 @@ class EmrFleetCreateClusterOperator(
   templateEngine: TemplateEngine
 ) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
-  val clusterName: String = params.get("name", classOf[String])
+  val clusterName: String = params.get("name", classOf[String], s"digdag-${params.get("session_uuid", classOf[String])}")
   val tags: Map[String, String] = params.get("tags", classOf[util.Map[String, String]]).asScala.toMap
   val releaseLabel: String = params.get("release_label", classOf[String], "emr-5.16.0")
   val customAmiId: Optional[String] = params.getOptional("custom_ami_id", classOf[String])

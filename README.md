@@ -100,7 +100,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Options
 
-- **name**: The name of the job flow. (string, required)
+- **name**: The name of the job flow. (string, default: `"digdag-${session_uuid}"`)
 - **tags**: A list of tags to associate with a cluster and propagate to Amazon EC2 instances. (string to string map, optional)
 - **release_label**: The Amazon EMR release label, which determines the version of open-source application packages installed on the cluster. Release labels are in the form emr-x.x.x, where x.x.x is an Amazon EMR release version. For more information about Amazon EMR release versions and included application versions and features, see [Docs](https://docs.aws.amazon.com/emr/latest/ReleaseGuide/). (string, default: `emr-5.16.0` )
 - **custom_ami_id**: Available only in Amazon EMR version 5.7.0 and later. The ID of a custom Amazon EBS-backed Linux AMI. If specified, Amazon EMR uses this AMI when it launches cluster EC2 instances. (string, optional)
