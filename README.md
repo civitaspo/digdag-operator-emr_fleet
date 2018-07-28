@@ -172,7 +172,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Output parameters
 
-- **emr_fleet.create_cluster.last_cluster.id**: The ID of the cluster created. (string)
+- **emr_fleet.last_cluster.id**: The ID of the cluster created. (string)
 
 ## Configuration for `emr_fleet.shutdown_cluster>` operator
 
