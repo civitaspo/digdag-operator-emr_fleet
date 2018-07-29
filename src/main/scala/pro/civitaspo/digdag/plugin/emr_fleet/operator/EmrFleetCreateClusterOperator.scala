@@ -113,15 +113,16 @@ class EmrFleetCreateClusterOperator(
     val volumeType: String = ebs.get("type", classOf[String], "gp2")
     val volumesPerInstance: Int = ebs.get("volumes_per_instance", classOf[Int], 1)
 
+    val volumeSpecification = new VolumeSpecification()
+    if (iops.isPresent) volumeSpecification.setIops(iops.get())
+    volumeSpecification.setSizeInGB(size)
+    volumeSpecification.setVolumeType(volumeType)
+
     new EbsConfiguration()
       .withEbsOptimized(isOptimized)
       .withEbsBlockDeviceConfigs(new EbsBlockDeviceConfig()
           .withVolumesPerInstance(volumesPerInstance)
-          .withVolumeSpecification(new VolumeSpecification()
-              .withIops(iops.orNull)
-              .withSizeInGB(size)
-              .withVolumeType(volumeType)
-          )
+          .withVolumeSpecification(volumeSpecification)
       )
   }
 
