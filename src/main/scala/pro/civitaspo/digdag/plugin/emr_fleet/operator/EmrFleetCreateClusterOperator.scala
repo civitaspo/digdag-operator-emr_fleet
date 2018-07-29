@@ -2,7 +2,8 @@ package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
 import java.util
 
-import com.amazonaws.services.elasticmapreduce.model.{Application, BootstrapActionConfig, Configuration, EbsBlockDeviceConfig, EbsConfiguration, InstanceFleetConfig, InstanceFleetProvisioningSpecifications, InstanceFleetType, InstanceTypeConfig, RunJobFlowRequest, ScriptBootstrapActionConfig, SpotProvisioningSpecification, SpotProvisioningTimeoutAction, Tag, VolumeSpecification}
+import com.amazonaws.services.elasticmapreduce.model.{Application, BootstrapActionConfig, Configuration, EbsBlockDeviceConfig, EbsConfiguration, InstanceFleetConfig, InstanceFleetProvisioningSpecifications, InstanceFleetType, InstanceTypeConfig, JobFlowInstancesConfig, PlacementType, RunJobFlowRequest, ScriptBootstrapActionConfig, SpotProvisioningSpecification, SpotProvisioningTimeoutAction, Tag, VolumeSpecification}
+import com.amazonaws.services.elasticmapreduce.model.InstanceFleetType.{CORE, MASTER, TASK}
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
@@ -60,7 +61,7 @@ class EmrFleetCreateClusterOperator(
     val candidates: Seq[Config] = masterFleet.getList("candidates", classOf[Config]).asScala
 
     val c = new InstanceFleetConfig()
-    c.setInstanceFleetType(InstanceFleetType.MASTER)
+    c.setInstanceFleetType(MASTER)
     c.setName(name)
     c.setLaunchSpecifications(instanceFleetProvisioningSpecifications)
     if (useSpotInstance) {
@@ -153,6 +154,37 @@ class EmrFleetCreateClusterOperator(
       )
   }
 
+  def instancesConfiguration: JobFlowInstancesConfig = {
+    val c = new JobFlowInstancesConfig()
+
+    if (masterSecurityGroups.nonEmpty) {
+      c.setEmrManagedMasterSecurityGroup(masterSecurityGroups.head)
+      if (masterSecurityGroups.tail.nonEmpty) {
+        c.setAdditionalMasterSecurityGroups(seqAsJavaList(masterSecurityGroups.tail))
+      }
+    }
+    if (slaveSecurityGroups.nonEmpty) {
+      c.setEmrManagedSlaveSecurityGroup(slaveSecurityGroups.head)
+      if (slaveSecurityGroups.tail.nonEmpty) {
+        c.setAdditionalSlaveSecurityGroups(seqAsJavaList(slaveSecurityGroups.tail))
+      }
+    }
+    if (availabilityZones.nonEmpty) c.setPlacement(new PlacementType().withAvailabilityZones(availabilityZones: _*))
+    if (sshKey.isPresent) c.setEc2KeyName(sshKey.get())
+    if (subnetIds.nonEmpty) c.setEc2SubnetIds(seqAsJavaList(subnetIds))
+
+    val instanceTypeConfigsBuilder = Seq.newBuilder[InstanceFleetConfig]
+    instanceTypeConfigsBuilder += masterFleetConfiguration
+    instanceTypeConfigsBuilder += configureSlaveFleet(CORE, coreFleet)
+    if (!taskFleet.isEmpty) instanceTypeConfigsBuilder += configureSlaveFleet(TASK, taskFleet)
+    c.setInstanceFleets(seqAsJavaList(instanceTypeConfigsBuilder.result()))
+
+    c.setKeepJobFlowAliveWhenNoSteps(keepAliveWhenNoSteps)
+    c.setTerminationProtected(terminationProtected)
+
+    c
+  }
+
   def createClusterRequest: RunJobFlowRequest = {
     new RunJobFlowRequest()
       .withAdditionalInfo(additionalInfo.orNull)
@@ -168,6 +200,7 @@ class EmrFleetCreateClusterOperator(
       .withServiceRole(serviceRole)
       .withTags(tags.toSeq.map(m => new Tag().withKey(m._1).withValue(m._2)): _*)
       .withVisibleToAllUsers(isVisible)
+      .withInstances(instancesConfiguration)
   }
 
   override def runTask(): TaskResult = {
