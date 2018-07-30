@@ -1,11 +1,13 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
-import com.amazonaws.services.elasticmapreduce.model.{Application, BootstrapActionConfig, Configuration, EbsBlockDeviceConfig, EbsConfiguration, InstanceFleetConfig, InstanceFleetProvisioningSpecifications, InstanceFleetType, InstanceTypeConfig, JobFlowInstancesConfig, PlacementType, RunJobFlowRequest, ScriptBootstrapActionConfig, SpotProvisioningSpecification, SpotProvisioningTimeoutAction, Tag, VolumeSpecification}
+import com.amazonaws.services.elasticmapreduce.model.{Application, BootstrapActionConfig, ClusterState, Configuration, EbsBlockDeviceConfig, EbsConfiguration, InstanceFleetConfig, InstanceFleetProvisioningSpecifications, InstanceFleetType, InstanceTypeConfig, JobFlowInstancesConfig, PlacementType, RunJobFlowRequest, ScriptBootstrapActionConfig, SpotProvisioningSpecification, SpotProvisioningTimeoutAction, Tag, VolumeSpecification}
+import com.amazonaws.services.elasticmapreduce.model.ClusterState.{RUNNING, TERMINATED, TERMINATED_WITH_ERRORS, TERMINATING, WAITING}
 import com.amazonaws.services.elasticmapreduce.model.InstanceFleetType.{CORE, MASTER, TASK}
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
+import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
 
@@ -24,7 +26,7 @@ class EmrFleetCreateClusterOperator(
   val sshKey: Optional[String] = params.getOptional("ssh_key", classOf[String])
   val subnetIds: Seq[String] = params.getListOrEmpty("subnet_ids", classOf[String]).asScala
   val availabilityZones: Seq[String] = params.getListOrEmpty("availability_zones", classOf[String]).asScala
-  val spotSpec: Config = params.getNestedOrGetEmpty("spot_specs")
+  val spotSpec: Config = params.getNestedOrGetEmpty("spot_spec")
   val masterFleet: Config = params.getNested("master_fleet")
   val coreFleet: Config = params.getNested("core_fleet")
   val taskFleet: Config = params.getNestedOrGetEmpty("task_fleet")
@@ -39,6 +41,8 @@ class EmrFleetCreateClusterOperator(
   val bootstrapActions: Seq[Config] = params.getListOrEmpty("bootstrap_actions", classOf[Config]).asScala
   val keepAliveWhenNoSteps: Boolean = params.get("keep_alive_when_no_steps", classOf[Boolean], true)
   val terminationProtected: Boolean = params.get("termination_protected", classOf[Boolean], false)
+  val waitAvailableState: Boolean = params.get("wait_available_state", classOf[Boolean], true)
+  val waitTimeoutDuration: DurationParam = params.get("wait_timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
 
   lazy val instanceFleetProvisioningSpecifications: InstanceFleetProvisioningSpecifications = {
     val blockDurationMinutes: Optional[Int] = spotSpec.getOptional("block_duration_minutes", classOf[Int])
@@ -215,6 +219,25 @@ class EmrFleetCreateClusterOperator(
     val builder = TaskResult.defaultBuilder(request)
     builder.storeParams(p)
     builder.resetStoreParams(ImmutableList.of(ConfigKey.of("emr_fleet", "last_cluster")))
+    if (waitAvailableState) builder.subtaskConfig(buildWaiterSubTaskConfig(r.getJobFlowId))
     builder.build()
+  }
+
+  def buildWaiterSubTaskConfig(clusterId: String): Config = {
+    val p = newEmptyParams
+    p.set("_command", clusterId)
+    p.set("_type", "emr_fleet.wait_cluster")
+    p.set("success_states", seqAsJavaList(Seq[ClusterState](RUNNING, WAITING)))
+    p.set("error_states", seqAsJavaList(Seq[ClusterState](TERMINATED, TERMINATED_WITH_ERRORS, TERMINATING)))
+    p.set("timeout_duration", waitTimeoutDuration.toString)
+
+    p.set("auth_method", authMethod)
+    p.set("profile_name", profileName)
+    if (profileFile.isPresent)p.set("profile_file", profileFile.get())
+    p.set("use_http_proxy", useHttpProxy)
+    if (region.isPresent) p.set("region", region.get())
+    if (endpoint.isPresent) p.set("endpoint", endpoint.get())
+
+    p
   }
 }

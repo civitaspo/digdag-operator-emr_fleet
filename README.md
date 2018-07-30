@@ -54,6 +54,8 @@ _export:
 ## Remarks
 
 - An EMR Cluster is also called an job flow. In the below explanations, I use both terms.
+- type `DurationParam` is strings matched `\s*(?:(?<days>\d+)\s*d)?\s*(?:(?<hours>\d+)\s*h)?\s*(?:(?<minutes>\d+)\s*m)?\s*(?:(?<seconds>\d+)\s*s)?\s*`.
+  - The strings is used as `java.time.Duration`.
 
 ## Common Configuration
 
@@ -171,10 +173,40 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
     - **args**: A list of command line arguments to pass to the bootstrap action script. (array of string, default: `[]`)
 - **keep_alive_when_no_steps**: Specifies whether the cluster should remain available after completing all steps. (boolean, default: `true`)
 - **termination_protected**: Specifies whether to lock the cluster to prevent the Amazon EC2 instances from being terminated by API call, user intervention, or in the event of a job-flow error. (boolean, default: `false`)
+- **wait_available_state**: Specifies whether to wait until the cluster becomes available after created. Available state means `"RUNNING"` or `"WAITING"`. (boolean, default: `true`)
+- **wait_timeout_duration**: Specify timeout period. (`DurationParam`, default: `"45m"`)
 
 ### Output parameters
 
 - **emr_fleet.last_cluster.id**: The ID of the cluster created. (string)
+- **emr_fleet.last_cluster.master.instance_id**: The instance id of the cluster master node. You can get this if **wait_available_state** is `true`. (string)
+- **emr_fleet.last_cluster.master.instance_type**: The ip of the cluster master node. You can get this if **wait_available_state** is `true`. (string)
+- **emr_fleet.last_cluster.master.market**: The market of the cluster master node. You can get this if **wait_available_state** is `true`. (string)
+- **emr_fleet.last_cluster.master.private_dns_name**: The private dns name of the cluster master node. You can get this if **wait_available_state** is `true`. (string)
+- **emr_fleet.last_cluster.master.private_ip_address**: The private ip address of the cluster master node. You can get this if **wait_available_state** is `true`. (string)
+- **emr_fleet.last_cluster.master.public_dns_name**: The public dns name of the cluster master node. You can get this if **wait_available_state** is `true`. (string)
+- **emr_fleet.last_cluster.master.public_ip_address**: The public ip address of the cluster master node. You can get this if **wait_available_state** is `true`. (string)
+
+## Configuration for `emr_fleet.wait_cluster>` operator
+
+### Options
+
+- **emr_fleet.wait_cluster>**: Specifies either the ID of an existing cluster (string, required)
+- **success_states**: The cluster states breaks polling the cluster. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, required)
+- **error_states**: The cluster states breaks polling the cluster with errors. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, optional)
+- **polling_interval**: Specify polling interval. (`DurationParam`, default: `"5s"`)
+- **timeout_duration**: Specify timeout period. (`DurationParam`, default: `"45m"`)
+
+### Output parameters
+
+- **emr_fleet.last_cluster.id**: The ID of the cluster created. (string)
+- **emr_fleet.last_cluster.master.instance_id**: The instance id of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.instance_type**: The ip of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.market**: The market of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.private_dns_name**: The private dns name of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.private_ip_address**: The private ip address of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.public_dns_name**: The public dns name of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.public_ip_address**: The public ip address of the cluster master node. (string)
 
 ## Configuration for `emr_fleet.shutdown_cluster>` operator
 
@@ -188,7 +220,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 - **hours_created_within**: Number of hours clusters created within. (integer, required)
 - **regexp**: Regular expression to filter listing clusters. (string, default: `".*"`)
-- **states**: The cluster state filters to apply when listing clusters. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, default: `["RUNNING", "WAITING"]`)
+- **states**: The cluster states filters to apply when listing clusters. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, default: `["RUNNING", "WAITING"]`)
 
 ### Output parameters
 

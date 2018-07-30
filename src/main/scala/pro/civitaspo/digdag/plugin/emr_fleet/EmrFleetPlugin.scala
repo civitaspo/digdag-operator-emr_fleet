@@ -6,7 +6,7 @@ import java.lang.reflect.Constructor
 import io.digdag.client.config.Config
 import io.digdag.spi.{Operator, OperatorContext, OperatorFactory, OperatorProvider, Plugin, TemplateEngine}
 import javax.inject.Inject
-import pro.civitaspo.digdag.plugin.emr_fleet.operator.{AbstractEmrFleetOperator, EmrFleetCreateClusterOperator, EmrFleetDetectClustersOperator, EmrFleetShutdownClusterOperator}
+import pro.civitaspo.digdag.plugin.emr_fleet.operator.{AbstractEmrFleetOperator, EmrFleetCreateClusterOperator, EmrFleetDetectClustersOperator, EmrFleetShutdownClusterOperator, EmrFleetWaitClusterOperator}
 
 object EmrFleetPlugin {
 
@@ -19,7 +19,8 @@ object EmrFleetPlugin {
       util.Arrays.asList(
         operatorFactory("emr_fleet.detect_clusters", classOf[EmrFleetDetectClustersOperator]),
         operatorFactory("emr_fleet.shutdown_cluster", classOf[EmrFleetShutdownClusterOperator]),
-        operatorFactory("emr_fleet.create_cluster", classOf[EmrFleetCreateClusterOperator])
+        operatorFactory("emr_fleet.create_cluster", classOf[EmrFleetCreateClusterOperator]),
+        operatorFactory("emr_fleet.wait_cluster", classOf[EmrFleetWaitClusterOperator])
       )
     }
 
