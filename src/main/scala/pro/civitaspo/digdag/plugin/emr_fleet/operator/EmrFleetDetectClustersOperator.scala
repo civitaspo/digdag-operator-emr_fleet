@@ -31,7 +31,7 @@ class EmrFleetDetectClustersOperator(
     val isDetected = clusters.nonEmpty
     val detectedClusterSummaries = clusters.map {cs =>
       val p = clusterSummaryToStoreParams(cs)
-      logger.info(s"detected => ${p}")
+      logger.info(s"""[$operatorName] detected: ${p}""")
       p
     }
 

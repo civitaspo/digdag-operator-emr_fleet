@@ -1,6 +1,6 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
-import com.amazonaws.services.elasticmapreduce.model.{ClusterState, DescribeClusterRequest, DescribeClusterResult, Instance, InstanceFleetType, ListInstancesRequest}
+import com.amazonaws.services.elasticmapreduce.model.{Cluster, ClusterState, DescribeClusterRequest, DescribeClusterResult, Instance, InstanceFleetType, ListInstancesRequest}
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskExecutionException, TaskResult, TemplateEngine}
@@ -42,7 +42,7 @@ class EmrFleetWaitClusterOperator(
     while (!pollCluster) {
       val timeSpentSeconds: Int = counter.next * pollingIntervalSeconds
       if (timeSpentSeconds >= timeoutSeconds) {
-        throw new TaskExecutionException(s"timeout => spent: ${timeSpentSeconds}s >= ${timeoutSeconds}s")
+        throw new TaskExecutionException(s"""[$operatorName] timeout because of spent: ${timeSpentSeconds}s >= ${timeoutSeconds}s""")
       }
       Thread.sleep(pollingIntervalSeconds * 1000)  // millis
     }
@@ -50,12 +50,13 @@ class EmrFleetWaitClusterOperator(
 
   private def pollCluster: Boolean = {
     val result: DescribeClusterResult = describeCluster
-    val state: ClusterState = ClusterState.fromValue(result.getCluster.getStatus.getState)
+    val cluster: Cluster = result.getCluster
+    val state: ClusterState = ClusterState.fromValue(cluster.getStatus.getState)
 
-    logger.info(s"current state: ${state.toString}")
+    logger.info(s"""[$operatorName] Id: ${cluster.getId}, Name: ${cluster.getName} (current state: ${state.toString})""")
 
     if (errorStates.exists(_.equals(state))) {
-      throw new TaskExecutionException(s"Cluster State is error state: ${state.toString}")
+      throw new TaskExecutionException(s"""[$operatorName] The cluster state is one of the error states: ${state.toString}""")
     }
     successStates.exists(_.equals(state))
   }
@@ -84,7 +85,7 @@ class EmrFleetWaitClusterOperator(
   private def storeParamMasterInstance(to: Config): Unit = {
     describeMasterInstance match {
       case None =>
-        logger.info(s"cannot get master node info on cluster: ${clusterId}.")
+        logger.info(s"""[$operatorName] The cluster: $clusterId does not have the master node info yet.""")
       case Some(i) =>
         if (i.getEc2InstanceId != null) to.set("instance_id", i.getEc2InstanceId)
         if (i.getInstanceType != null) to.set("instance_type", i.getInstanceType)

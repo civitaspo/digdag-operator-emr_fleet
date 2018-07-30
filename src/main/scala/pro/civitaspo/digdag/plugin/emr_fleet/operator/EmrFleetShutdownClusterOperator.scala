@@ -14,7 +14,7 @@ class EmrFleetShutdownClusterOperator(
 
   override def runTask(): TaskResult = {
     withEmr(_.terminateJobFlows(new TerminateJobFlowsRequest().withJobFlowIds(clusterId)))
-    logger.info(s"Shutdown => Id: $clusterId")
+    logger.info(s"""[$operatorName] cluster id: $clusterId""")
     TaskResult.empty(request)
   }
 }

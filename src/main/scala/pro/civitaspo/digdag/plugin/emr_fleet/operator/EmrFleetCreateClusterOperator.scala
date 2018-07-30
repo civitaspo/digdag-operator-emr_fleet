@@ -211,7 +211,7 @@ class EmrFleetCreateClusterOperator(
     val r = withEmr {emr =>
       emr.runJobFlow(buildCreateClusterRequest)
     }
-    logger.info(s"""Create Cluster => Request Accepted: ${r.getJobFlowId}""")
+    logger.info(s"""[$operatorName] The request to create a cluster is accepted: ${r.getJobFlowId}""")
 
     val p = newEmptyParams
     p.getNestedOrSetEmpty("emr_fleet").getNestedOrSetEmpty("last_cluster").set("id", r.getJobFlowId)
@@ -219,7 +219,10 @@ class EmrFleetCreateClusterOperator(
     val builder = TaskResult.defaultBuilder(request)
     builder.storeParams(p)
     builder.resetStoreParams(ImmutableList.of(ConfigKey.of("emr_fleet", "last_cluster")))
-    if (waitAvailableState) builder.subtaskConfig(buildWaiterSubTaskConfig(r.getJobFlowId))
+    if (waitAvailableState) {
+      logger.info(s"""[$operatorName] run a sub task: emr_fleet.wait_cluster""")
+      builder.subtaskConfig(buildWaiterSubTaskConfig(r.getJobFlowId))
+    }
     builder.build()
   }
 
