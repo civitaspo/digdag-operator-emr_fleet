@@ -56,6 +56,7 @@ class EmrFleetCreateClusterOperator(
   def masterFleetConfiguration: InstanceFleetConfig = {
     val name: String = masterFleet.get("name", classOf[String], "master instance fleet")
     val useSpotInstance: Boolean = masterFleet.get("use_spot_instance", classOf[Boolean], true)
+    val defaultBidPercentage: Double = masterFleet.get("bid_percentage", classOf[Double], 100.0)
     val candidates: Seq[Config] = masterFleet.getList("candidates", classOf[Config]).asScala
 
     val c = new InstanceFleetConfig()
@@ -70,13 +71,14 @@ class EmrFleetCreateClusterOperator(
       c.setTargetSpotCapacity(0)
       c.setTargetOnDemandCapacity(1)
     }
-    c.setInstanceTypeConfigs(seqAsJavaList(candidates.map(configureCandidate)))
+    c.setInstanceTypeConfigs(seqAsJavaList(candidates.map(configureCandidate(_, defaultBidPercentage))))
     c
   }
 
   def configureSlaveFleet(fleetType: InstanceFleetType, fleetConfiguration: Config): InstanceFleetConfig = {
     val name: String = fleetConfiguration.get("name", classOf[String], s"${fleetType.toString.toLowerCase} instance fleet")
     val targetCapacity: Int = fleetConfiguration.get("target_capacity", classOf[Int])
+    val defaultBidPercentage: Double = masterFleet.get("bid_percentage", classOf[Double], 100.0)
     val candidates: Seq[Config] = fleetConfiguration.getList("candidates", classOf[Config]).asScala
 
     new InstanceFleetConfig()
@@ -84,12 +86,12 @@ class EmrFleetCreateClusterOperator(
       .withName(name)
       .withLaunchSpecifications(instanceFleetProvisioningSpecifications)
       .withTargetSpotCapacity(targetCapacity)
-      .withInstanceTypeConfigs(seqAsJavaList(candidates.map(configureCandidate)))
+      .withInstanceTypeConfigs(seqAsJavaList(candidates.map(configureCandidate(_, defaultBidPercentage))))
   }
 
-  def configureCandidate(candidate: Config): InstanceTypeConfig = {
+  def configureCandidate(candidate: Config, defaultBidPercentage: Double): InstanceTypeConfig = {
     val bidPrice: Optional[String] = candidate.getOptional("bid_price", classOf[String])
-    val bidPercentage: Double = candidate.get("bid_percentage", classOf[Double], 100.0)
+    val bidPercentage: Double = candidate.get("bid_percentage", classOf[Double], defaultBidPercentage)
     val instanceType: String = candidate.get("instance_type", classOf[String])
     val applicationConfigurations: Seq[Config] = candidate.getListOrEmpty("configurations", classOf[Config]).asScala
     val ebs: Config = candidate.getNestedOrGetEmpty("ebs")
