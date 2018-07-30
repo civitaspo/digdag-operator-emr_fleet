@@ -100,8 +100,8 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Options
 
-- **name**: The name of the job flow. (string, required)
-- **tags**: A list of tags to associate with a cluster and propagate to Amazon EC2 instances. (array of map, optional)
+- **name**: The name of the job flow. (string, default: `"digdag-${session_uuid}"`)
+- **tags**: A list of tags to associate with a cluster and propagate to Amazon EC2 instances. (string to string map, optional)
 - **release_label**: The Amazon EMR release label, which determines the version of open-source application packages installed on the cluster. Release labels are in the form emr-x.x.x, where x.x.x is an Amazon EMR release version. For more information about Amazon EMR release versions and included application versions and features, see [Docs](https://docs.aws.amazon.com/emr/latest/ReleaseGuide/). (string, default: `emr-5.16.0` )
 - **custom_ami_id**: Available only in Amazon EMR version 5.7.0 and later. The ID of a custom Amazon EBS-backed Linux AMI. If specified, Amazon EMR uses this AMI when it launches cluster EC2 instances. (string, optional)
 - **master_security_groups**: A list of Amazon EC2 security group IDs for the master node. The first one is used as Amazon EMR–managed security group, and the left is used as additional one. See [Docs](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-security-groups.html) to get more information. (array of string, optional)
@@ -109,16 +109,17 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **ssh_key**: The name of the EC2 key pair that can be used to ssh to the nodes. (string, optional)
 - **subnet_ids**: Applies to clusters that use the instance fleet configuration. When multiple EC2 subnet IDs are specified, Amazon EMR evaluates them and launches instances in the optimal subnet. (array of string, optional)
 - **availability_zones**: When multiple Availability Zones are specified, Amazon EMR evaluates them and launches instances in the optimal Availability Zone. (array of string, optional)
-- **spot_specs**: The launch specification for Spot instances in the instance fleet, which determines the defined duration and provisioning timeout behavior. (map, default: `{}`)
+- **spot_spec**: The launch specification for Spot instances in the instance fleet, which determines the defined duration and provisioning timeout behavior. (map, default: `{}`)
   - **block_duration_minutes**: The defined duration for Spot instances (also known as Spot blocks) in minutes. When specified, the Spot instance does not terminate before the defined duration expires, and defined duration pricing for Spot instances applies. Valid values are 60, 120, 180, 240, 300, or 360. The duration period starts as soon as a Spot instance receives its instance ID. At the end of the duration, Amazon EC2 marks the Spot instance for termination and provides a Spot instance termination notice, which gives the instance a two-minute warning before it terminates. (integer, optional)
   - **timeout_action**: The action to take when **target_spot_capacity** has not been fulfilled when the **timeout_duration_minutes** has expired. Spot instances are not uprovisioned within the Spot provisioining timeout. Valid values are `TERMINATE_CLUSTER` and `SWITCH_TO_ON_DEMAND`. `SWITCH_TO_ON_DEMAND` specifies that if no Spot instances are available, On-Demand Instances should be provisioned to fulfill any remaining Spot capacity. (string, default: `TERMINATE_CLUSTER`)
   - **timeout_duration_minutes**: The spot provisioning timeout period in minutes. If Spot instances are not provisioned within this time period, the **timeout_action** is taken. Minimum value is 5 and maximum value is 1440. The timeout applies only during initial provisioning, when the cluster is first created. (integer, default: `45`)
 - **master_fleet**: Describes the EC2 instances and instance configurations for master node that use the instance fleet configuration. (map, required)
   - **name**: The friendly name of the instance fleet. (string, default: `master instance fleet`)
   - **use_spot_instance**: Indicates whether master node uses Spot instance or On-Demand instance. (boolean, default: `true`)
+  - **default_bid_percentage**: The bid price, as a percentage of On-Demand price, for each EC2 Spot instance as defined by **instance_type**. Expressed as a number (for example, 20 specifies 20%). This value is used for **candidates**'s **bid_percentage** default value. (double, default: `100.0`)
   - **candidates**: An instance type configuration for each instance type in an instance fleet, which determines the EC2 instances Amazon EMR attempts to provision to fulfill On-Demand and Spot target capacities. There can be a maximum of 5 instance type configurations in a fleet. (array of map, required)
     - **bid_price**: The bid price for each EC2 Spot instance type as defined by **instance_type**. Expressed in USD. If neither **bid_price** nor **bid_percentage** is provided, **bid_percentage** defaults to 100%. (string, optional)
-    - **bid_percentage**: The bid price, as a percentage of On-Demand price, for each EC2 Spot instance as defined by **instance_type**. Expressed as a number (for example, 20 specifies 20%). If neither **bid_price** nor **bid_percentage** is provided, **bid_percentage** defaults to 100%. (double, default: `100.0`)
+    - **bid_percentage**: The bid price, as a percentage of On-Demand price, for each EC2 Spot instance as defined by **instance_type**. Expressed as a number (for example, 20 specifies 20%). If neither **bid_price** nor **bid_percentage** is provided, **bid_percentage** defaults to 100%. (double, default: `${master_fleet.bid_percentage}`)
     - **instance_type**: An EC2 instance type, such as `m3.xlarge`. (string, required)
     - **configurations**: A configuration classification that applies when provisioning cluster instances, which can include configurations for applications and software that run on the cluster. (array of map, optional)
       - **classification**: The classification within a configuration. (string, required)
@@ -126,16 +127,17 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
       - **configurations**: A list of additional configurations to apply within a configuration object. (array of this configurations object, optional)
     - **ebs**: The Amazon EBS configuration of a cluster instance. (map, default: `{}`)
       - **optimized**: Indicates whether an Amazon EBS volume is EBS-optimized. (boolean, default: `true`)
-      - **iops**: The number of I/O operations per second (IOPS) that the volume supports. (integer, default: `null`)
+      - **iops**: The number of I/O operations per second (IOPS) that the volume supports. (integer, optional)
       - **size**: The volume size, in gibibytes (GiB). This can be a number from 1 - 1024. If the volume type is EBS-optimized, the minimum value is 10. (integer, default: `256`)
       - **type**: The volume type. Volume types supported are gp2, io1, standard. (string, default: `gp2`)
       - **volumes_per_instance**: Number of EBS volumes with a specific volume configuration that will be associated with every instance in the instance group. (integer, default: `1`)
 - **core_fleet**: Describes the EC2 instances and instance configurations for core nodes that use the instance fleet configuration. (map, required)
   - **name**: The friendly name of the instance fleet. (string, default: `core instance fleet`)
   - **target_capacity**: The target capacity of **spot_units** for the instance fleet, which determines how many Spot instances to provision. When the instance fleet launches, Amazon EMR tries to provision Spot instances as specified by **candidates** settings. Each instance configuration has a specified **spot_units**. When a Spot instance is provisioned, the **spot_units** count toward the target capacity. Amazon EMR provisions instances until the target capacity is totally fulfilled, even if this results in an overage. (integer, required)
+  - **bid_percentage**: The bid price, as a percentage of On-Demand price, for each EC2 Spot instance as defined by **instance_type**. Expressed as a number (for example, 20 specifies 20%). This value is used for **candidates**'s **bid_percentage** default value. (double, default: `100.0`)
   - **candidates**: An instance type configuration for each instance type in an instance fleet, which determines the EC2 instances Amazon EMR attempts to provision to fulfill On-Demand and Spot target capacities. There can be a maximum of 5 instance type configurations in a fleet. (array of map, required)
     - **bid_price**: The bid price for each EC2 Spot instance type as defined by **instance_type**. Expressed in USD. If neither **bid_price** nor **bid_percentage** is provided, **bid_percentage** defaults to 100%. (string, optional)
-    - **bid_percentage**: The bid price, as a percentage of On-Demand price, for each EC2 Spot instance as defined by **instance_type**. Expressed as a number (for example, 20 specifies 20%). If neither **bid_price** nor **bid_percentage** is provided, **bid_percentage** defaults to 100%. (double, default: `100.0`)
+    - **bid_percentage**: The bid price, as a percentage of On-Demand price, for each EC2 Spot instance as defined by **instance_type**. Expressed as a number (for example, 20 specifies 20%). If neither **bid_price** nor **bid_percentage** is provided, **bid_percentage** defaults to 100%. (double, default: `${core_fleet.bid_percentage}`)
     - **instance_type**: An EC2 instance type, such as `m3.xlarge`. (string, required)
     - **configurations**: A configuration classification that applies when provisioning cluster instances, which can include configurations for applications and software that run on the cluster. (array of map, optional)
       - **classification**: The classification within a configuration. (string, required)
@@ -143,7 +145,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
       - **configurations**: A list of additional configurations to apply within a configuration object. (array of this configurations object, optional)
     - **ebs**: The Amazon EBS configuration of a cluster instance. (map, default: `{}`)
       - **optimized**: Indicates whether an Amazon EBS volume is EBS-optimized. (boolean, default: `true`)
-      - **iops**: The number of I/O operations per second (IOPS) that the volume supports. (integer, default: `null`)
+      - **iops**: The number of I/O operations per second (IOPS) that the volume supports. (integer, optional)
       - **size**: The volume size, in gibibytes (GiB). This can be a number from 1 - 1024. If the volume type is EBS-optimized, the minimum value is 10. (integer, default: `256`)
       - **type**: The volume type. Volume types supported are gp2, io1, standard. (string, default: `gp2`)
       - **volumes_per_instance**: Number of EBS volumes with a specific volume configuration that will be associated with every instance in the instance group. (integer, default: `1`)
@@ -153,7 +155,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - The other options are the same as **task** option.
 - **log_uri**: The location in Amazon S3 to write the log files of the job flow. If a value is not provided, logs are not created. (string, optional)
 - **additional_info**: A JSON string for selecting additional features. (string, optional)
-- **is_visible**: Whether the cluster is visible to all IAM users of the AWS account associated with the cluster. If this value is set to true, all IAM users of that AWS account can view and (if they have the proper policy permissions set) manage the cluster. If it is set to false, only the IAM user that created the cluster can view and manage it. (boolean, default: `true`)
+- **visible**: Whether the cluster is visible to all IAM users of the AWS account associated with the cluster. If this value is set to true, all IAM users of that AWS account can view and (if they have the proper policy permissions set) manage the cluster. If it is set to false, only the IAM user that created the cluster can view and manage it. (boolean, default: `true`)
 - **security_configuration**: The name of a security configuration to apply to the cluster. (string, optional)
 - **instance_profile**: Also called job flow role and EC2 role. An IAM role for an EMR cluster. The EC2 instances of the cluster assume this role. The default role is EMR_EC2_DefaultRole. In order to use the default role, you must have already created it using the CLI or console. (string, default: `EMR_EC2_DefaultRole`)
 - **service_role**: The IAM role that will be assumed by the Amazon EMR service to access AWS resources on your behalf. (string, default: `EMR_DefaultRole`)
@@ -172,7 +174,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Output parameters
 
-- **emr_fleet.create_cluster.last_cluster.id**: The ID of the cluster created. (string)
+- **emr_fleet.last_cluster.id**: The ID of the cluster created. (string)
 
 ## Configuration for `emr_fleet.shutdown_cluster>` operator
 
