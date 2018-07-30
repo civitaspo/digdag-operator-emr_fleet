@@ -188,6 +188,17 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **polling_interval**: Specify polling interval. (`DurationParam`, default: `"5s"`)
 - **timeout_duration**: Specify timeout period. (`DurationParam`, default: `"45m"`)
 
+### Output parameters
+
+- **emr_fleet.last_cluster.id**: The ID of the cluster created. (string)
+- **emr_fleet.last_cluster.master.instance_id**: The instance id of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.instance_type**: The ip of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.market**: The market of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.private_dns_name**: The private dns name of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.private_ip_address**: The private ip address of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.public_dns_name**: The public dns name of the cluster master node. (string)
+- **emr_fleet.last_cluster.master.public_ip_address**: The public ip address of the cluster master node. (string)
+
 ## Configuration for `emr_fleet.shutdown_cluster>` operator
 
 ### Options

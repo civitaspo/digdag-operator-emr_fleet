@@ -1,7 +1,8 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
-import com.amazonaws.services.elasticmapreduce.model.{ClusterState, DescribeClusterRequest, DescribeClusterResult}
-import io.digdag.client.config.Config
+import com.amazonaws.services.elasticmapreduce.model.{ClusterState, DescribeClusterRequest, DescribeClusterResult, Instance, InstanceFleetType, ListInstancesRequest}
+import com.google.common.collect.ImmutableList
+import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskExecutionException, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 
@@ -21,7 +22,17 @@ class EmrFleetWaitClusterOperator(
 
   override def runTask(): TaskResult = {
     pollingCluster()
-    TaskResult.empty(request)
+
+    val p = newEmptyParams
+    p.getNestedOrSetEmpty("emr_fleet").getNestedOrSetEmpty("last_cluster").set("id", clusterId)
+
+    val c = p.getNestedOrSetEmpty("emr_fleet").getNestedOrSetEmpty("last_cluster").getNestedOrSetEmpty("master")
+    storeParamMasterInstance(c)
+
+    val builder = TaskResult.defaultBuilder(request)
+    builder.resetStoreParams(ImmutableList.of(ConfigKey.of("emr_fleet", "last_cluster")))
+    builder.storeParams(p)
+    builder.build()
   }
 
   private def pollingCluster(): Unit = {
@@ -56,5 +67,32 @@ class EmrFleetWaitClusterOperator(
            .withClusterId(clusterId)
        )
      }
+  }
+
+  private def describeMasterInstance: Option[Instance] = {
+    val list = withEmr { emr =>
+      emr.listInstances(new ListInstancesRequest()
+        .withClusterId(clusterId)
+        .withInstanceFleetType(InstanceFleetType.MASTER)
+      )
+    }
+    val instances: Seq[Instance] = list.getInstances.asScala
+    if (instances.isEmpty) return None
+    Some(instances.head)
+  }
+
+  private def storeParamMasterInstance(to: Config): Unit = {
+    describeMasterInstance match {
+      case None =>
+        logger.info(s"cannot get master node info on cluster: ${clusterId}.")
+      case Some(i) =>
+        if (i.getEc2InstanceId != null) to.set("instance_id", i.getEc2InstanceId)
+        if (i.getInstanceType != null) to.set("instance_type", i.getInstanceType)
+        if (i.getMarket != null) to.set("market", i.getMarket)
+        if (i.getPrivateDnsName != null) to.set("private_dns_name", i.getPrivateDnsName)
+        if (i.getPrivateIpAddress != null) to.set("private_ip_address", i.getPrivateIpAddress)
+        if (i.getPublicDnsName != null) to.set("public_dns_name", i.getPublicDnsName)
+        if (i.getPublicIpAddress != null) to.set("public_ip_address", i.getPublicIpAddress)
+    }
   }
 }
