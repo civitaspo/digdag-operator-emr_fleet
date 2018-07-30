@@ -24,7 +24,7 @@ class EmrFleetCreateClusterOperator(
   val sshKey: Optional[String] = params.getOptional("ssh_key", classOf[String])
   val subnetIds: Seq[String] = params.getListOrEmpty("subnet_ids", classOf[String]).asScala
   val availabilityZones: Seq[String] = params.getListOrEmpty("availability_zones", classOf[String]).asScala
-  val spotSpec: Config = params.getNestedOrGetEmpty("spot_specs")
+  val spotSpec: Config = params.getNestedOrGetEmpty("spot_spec")
   val masterFleet: Config = params.getNested("master_fleet")
   val coreFleet: Config = params.getNested("core_fleet")
   val taskFleet: Config = params.getNestedOrGetEmpty("task_fleet")
