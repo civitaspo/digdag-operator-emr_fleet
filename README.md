@@ -54,6 +54,8 @@ _export:
 ## Remarks
 
 - An EMR Cluster is also called an job flow. In the below explanations, I use both terms.
+- type `DurationParam` is strings matched `\s*(?:(?<days>\d+)\s*d)?\s*(?:(?<hours>\d+)\s*h)?\s*(?:(?<minutes>\d+)\s*m)?\s*(?:(?<seconds>\d+)\s*s)?\s*`.
+  - The strings is used as `java.time.Duration`.
 
 ## Common Configuration
 
@@ -183,8 +185,8 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **emr_fleet.wait_cluster>**: Specifies either the ID of an existing cluster (string, required)
 - **success_states**: The cluster states breaks polling the cluster. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, required)
 - **error_states**: The cluster states breaks polling the cluster with errors. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, optional)
-- **polling_interval_seconds**: Specify polling interval in seconds. (integer, default: `5`)
-- **timeout_duration_seconds**: Specify timeout period in seconds. (integer, default: `${45 * 60}`)
+- **polling_interval**: Specify polling interval. (`DurationParam`, default: `"5s"`)
+- **timeout_duration**: Specify timeout period. (`DurationParam`, default: `"45m"`)
 
 ## Configuration for `emr_fleet.shutdown_cluster>` operator
 
