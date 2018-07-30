@@ -11,7 +11,7 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
 import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{OperatorContext, SecretProvider, TemplateEngine}
-import io.digdag.util.BaseOperator
+import io.digdag.util.{BaseOperator, DurationParam}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.Try
@@ -32,7 +32,7 @@ abstract class AbstractEmrFleetOperator(
   protected val isAllowedAuthMethodInstance: Boolean = systemConfig.get("emr_fleet.allow_auth_method_instance", classOf[Boolean], false)
   protected val isAllowedAuthMethodProfile: Boolean = systemConfig.get("emr_fleet.allow_auth_method_profile", classOf[Boolean], false)
   protected val isAllowedAuthMethodProperties: Boolean = systemConfig.get("emr_fleet.allow_auth_method_properties", classOf[Boolean], false)
-  protected val assumeRoleTimeoutSeconds: Int = systemConfig.get("emr_fleet.assume_role_timeout_seconds", classOf[Int], 3600)
+  protected val assumeRoleTimeoutDuration: DurationParam = systemConfig.get("emr_fleet.assume_role_timeout_duration", classOf[DurationParam], DurationParam.parse("1h"))
 
   protected val accessKeyId: Optional[String] = secrets.getSecretOptional("access_key_id")
   protected val secretAccessKey: Optional[String] = secrets.getSecretOptional("secret_access_key")
@@ -116,7 +116,7 @@ abstract class AbstractEmrFleetOperator(
 
     val role = sts.assumeRole(new AssumeRoleRequest()
       .withRoleArn(roleArn.get())
-      .withDurationSeconds(assumeRoleTimeoutSeconds)
+      .withDurationSeconds(assumeRoleTimeoutDuration.getDuration.getSeconds.toInt)
       .withRoleSessionName(roleSessionName)
     )
     val credentials = new BasicSessionCredentials(

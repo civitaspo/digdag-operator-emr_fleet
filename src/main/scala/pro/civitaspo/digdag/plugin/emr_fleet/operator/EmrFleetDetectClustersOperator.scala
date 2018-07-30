@@ -6,6 +6,7 @@ import com.amazonaws.services.elasticmapreduce.model.{ClusterState, ClusterSumma
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
+import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
 
@@ -17,7 +18,7 @@ class EmrFleetDetectClustersOperator(
 ) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
   val timezone: String = params.get("timezone", classOf[String])
-  val hoursCreatedWithin: Int = params.get("hours_created_within", classOf[Int])
+  val createdWithin: DurationParam = params.get("created_within", classOf[DurationParam])
   val regexp: String = params.get("regexp", classOf[String], ".*")
   val states: Seq[ClusterState] = {
     val list = params.getListOrEmpty("states", classOf[String])
@@ -86,7 +87,7 @@ class EmrFleetDetectClustersOperator(
   }
 
   private def createdAfter: Date = {
-    val minusMillis: Long = hoursCreatedWithin * 3600 * 1000
+    val minusMillis: Long = createdWithin.getDuration.toMillis
     new Date(System.currentTimeMillis() - minusMillis)
   }
 }

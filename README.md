@@ -67,7 +67,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **emr_fleet.allow_auth_method_instance**: Indicates whether users can use **auth_method** `"instance"` (boolean, default: `false`)
 - **emr_fleet.allow_auth_method_profile**: Indicates whether users can use **auth_method** `"profile"` (boolean, default: `false`)
 - **emr_fleet.allow_auth_method_properties**: Indicates whether users can use **auth_method** `"properties"` (boolean, default: `false`)
-- **emr_fleet.assume_role_timeout_seconds**: Maximum Seconds which server administer allows when users assume **role_arn**. (integer, default: `3600`)
+- **emr_fleet.assume_role_timeout_duration**: Maximum duration which server administer allows when users assume **role_arn**. (`DurationParam`, default: `1h`)
 
 ### Secrets
 
@@ -112,9 +112,9 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **subnet_ids**: Applies to clusters that use the instance fleet configuration. When multiple EC2 subnet IDs are specified, Amazon EMR evaluates them and launches instances in the optimal subnet. (array of string, optional)
 - **availability_zones**: When multiple Availability Zones are specified, Amazon EMR evaluates them and launches instances in the optimal Availability Zone. (array of string, optional)
 - **spot_spec**: The launch specification for Spot instances in the instance fleet, which determines the defined duration and provisioning timeout behavior. (map, default: `{}`)
-  - **block_duration_minutes**: The defined duration for Spot instances (also known as Spot blocks) in minutes. When specified, the Spot instance does not terminate before the defined duration expires, and defined duration pricing for Spot instances applies. Valid values are 60, 120, 180, 240, 300, or 360. The duration period starts as soon as a Spot instance receives its instance ID. At the end of the duration, Amazon EC2 marks the Spot instance for termination and provides a Spot instance termination notice, which gives the instance a two-minute warning before it terminates. (integer, optional)
-  - **timeout_action**: The action to take when **target_spot_capacity** has not been fulfilled when the **timeout_duration_minutes** has expired. Spot instances are not uprovisioned within the Spot provisioining timeout. Valid values are `TERMINATE_CLUSTER` and `SWITCH_TO_ON_DEMAND`. `SWITCH_TO_ON_DEMAND` specifies that if no Spot instances are available, On-Demand Instances should be provisioned to fulfill any remaining Spot capacity. (string, default: `TERMINATE_CLUSTER`)
-  - **timeout_duration_minutes**: The spot provisioning timeout period in minutes. If Spot instances are not provisioned within this time period, the **timeout_action** is taken. Minimum value is 5 and maximum value is 1440. The timeout applies only during initial provisioning, when the cluster is first created. (integer, default: `45`)
+  - **block_duration**: The defined duration for Spot instances (also known as Spot blocks). When specified, the Spot instance does not terminate before the defined duration expires, and defined duration pricing for Spot instances applies. Current valid values are `"1h"`, `"2h"`, `"3h"`, `"4h"`, `"5h"`, or `"6h"`. The duration period starts as soon as a Spot instance receives its instance ID. At the end of the duration, Amazon EC2 marks the Spot instance for termination and provides a Spot instance termination notice, which gives the instance a two-minute warning before it terminates. (`DurationParam`, optional)
+  - **timeout_action**: The action to take when **target_spot_capacity** has not been fulfilled when the **timeout_duration** has expired. Spot instances are not uprovisioned within the Spot provisioining timeout. Valid values are `TERMINATE_CLUSTER` and `SWITCH_TO_ON_DEMAND`. `SWITCH_TO_ON_DEMAND` specifies that if no Spot instances are available, On-Demand Instances should be provisioned to fulfill any remaining Spot capacity. (string, default: `TERMINATE_CLUSTER`)
+  - **timeout_duration**: The spot provisioning timeout period. If Spot instances are not provisioned within this time period, the **timeout_action** is taken. Minimum value is `"5m"` and maximum value is `"1d"`. The timeout applies only during initial provisioning, when the cluster is first created. (`DurationParam`, default: `45m`)
 - **master_fleet**: Describes the EC2 instances and instance configurations for master node that use the instance fleet configuration. (map, required)
   - **name**: The friendly name of the instance fleet. (string, default: `master instance fleet`)
   - **use_spot_instance**: Indicates whether master node uses Spot instance or On-Demand instance. (boolean, default: `true`)
@@ -218,7 +218,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Options
 
-- **hours_created_within**: Number of hours clusters created within. (integer, required)
+- **created_within**: Duration clusters created within. (`DurationParam`, required)
 - **regexp**: Regular expression to filter listing clusters. (string, default: `".*"`)
 - **states**: The cluster states filters to apply when listing clusters. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, default: `["RUNNING", "WAITING"]`)
 

@@ -45,14 +45,14 @@ class EmrFleetCreateClusterOperator(
   val waitTimeoutDuration: DurationParam = params.get("wait_timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
 
   lazy val instanceFleetProvisioningSpecifications: InstanceFleetProvisioningSpecifications = {
-    val blockDurationMinutes: Optional[Int] = spotSpec.getOptional("block_duration_minutes", classOf[Int])
+    val blockDuration: Optional[DurationParam] = spotSpec.getOptional("block_duration", classOf[DurationParam])
     val timeoutAction: String = spotSpec.get("timeout_action", classOf[String], "TERMINATE_CLUSTER")
-    val timeoutDurationMinutes: Int = spotSpec.get("timeout_duration_minutes", classOf[Int], 45)
+    val timeoutDuration: DurationParam = spotSpec.get("timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
 
     val s = new SpotProvisioningSpecification()
-    if (blockDurationMinutes.isPresent) s.setBlockDurationMinutes(blockDurationMinutes.get())
+    if (blockDuration.isPresent) s.setBlockDurationMinutes(blockDuration.get().getDuration.toMinutes.toInt)
     s.setTimeoutAction(SpotProvisioningTimeoutAction.fromValue(timeoutAction))
-    s.setTimeoutDurationMinutes(timeoutDurationMinutes)
+    s.setTimeoutDurationMinutes(timeoutDuration.getDuration.toMinutes.toInt)
 
     new InstanceFleetProvisioningSpecifications().withSpotSpecification(s)
   }
