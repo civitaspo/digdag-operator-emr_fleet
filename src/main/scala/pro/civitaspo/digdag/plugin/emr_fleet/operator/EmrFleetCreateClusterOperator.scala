@@ -18,7 +18,7 @@ class EmrFleetCreateClusterOperator(
 ) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
   val clusterName: String = params.get("name", classOf[String], s"digdag-${params.get("session_uuid", classOf[String])}")
-  val tags: Map[String, String] = params.get("tags", classOf[util.Map[String, String]], mapAsJavaMap(Map[String, String]())).asScala.toMap
+  val tags: Map[String, String] = params.getMapOrEmpty("tags", classOf[String], classOf[String]).asScala.toMap
   val releaseLabel: String = params.get("release_label", classOf[String], "emr-5.16.0")
   val customAmiId: Optional[String] = params.getOptional("custom_ami_id", classOf[String])
   val masterSecurityGroups: Seq[String] = params.getListOrEmpty("master_security_groups", classOf[String]).asScala
@@ -130,12 +130,12 @@ class EmrFleetCreateClusterOperator(
   def configureApplicationConfiguration(applicationConfiguration: Config): Configuration = {
     val ac = applicationConfiguration  // to shorten var name
     val classification: String = ac.get("classification", classOf[String])
-    val properties: Optional[util.Map[String, String]] = ac.getOptional("properties", classOf[util.Map[String, String]])
+    val properties: Map[String, String] = ac.getMapOrEmpty("properties", classOf[String], classOf[String]).asScala.toMap
     val configurations: Seq[Config] = ac.getListOrEmpty("configurations", classOf[Config]).asScala
 
     val c = new Configuration()
     c.setClassification(classification)
-    if (properties.isPresent) c.setProperties(properties.get())
+    if (properties.nonEmpty) c.setProperties(mapAsJavaMap(properties))
     if (configurations.nonEmpty) c.setConfigurations(seqAsJavaList(configurations.map(configureApplicationConfiguration)))
     c
   }
