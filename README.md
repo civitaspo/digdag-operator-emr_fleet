@@ -176,6 +176,16 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 - **emr_fleet.last_cluster.id**: The ID of the cluster created. (string)
 
+## Configuration for `emr_fleet.wait_cluster>` operator
+
+### Options
+
+- **emr_fleet.wait_cluster>**: Specifies either the ID of an existing cluster (string, required)
+- **success_states**: The cluster states breaks polling the cluster. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, required)
+- **error_states**: The cluster states breaks polling the cluster with errors. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, optional)
+- **polling_interval_seconds**: Specify polling interval in seconds. (integer, default: `5`)
+- **timeout_duration_seconds**: Specify timeout period in seconds. (integer, default: `${45 * 60}`)
+
 ## Configuration for `emr_fleet.shutdown_cluster>` operator
 
 ### Options
@@ -188,7 +198,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 - **hours_created_within**: Number of hours clusters created within. (integer, required)
 - **regexp**: Regular expression to filter listing clusters. (string, default: `".*"`)
-- **states**: The cluster state filters to apply when listing clusters. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, default: `["RUNNING", "WAITING"]`)
+- **states**: The cluster states filters to apply when listing clusters. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, default: `["RUNNING", "WAITING"]`)
 
 ### Output parameters
 
