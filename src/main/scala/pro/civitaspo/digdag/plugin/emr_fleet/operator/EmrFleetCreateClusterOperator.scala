@@ -1,7 +1,5 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
-import java.util
-
 import com.amazonaws.services.elasticmapreduce.model.{Application, BootstrapActionConfig, Configuration, EbsBlockDeviceConfig, EbsConfiguration, InstanceFleetConfig, InstanceFleetProvisioningSpecifications, InstanceFleetType, InstanceTypeConfig, JobFlowInstancesConfig, PlacementType, RunJobFlowRequest, ScriptBootstrapActionConfig, SpotProvisioningSpecification, SpotProvisioningTimeoutAction, Tag, VolumeSpecification}
 import com.amazonaws.services.elasticmapreduce.model.InstanceFleetType.{CORE, MASTER, TASK}
 import com.google.common.base.Optional
@@ -185,7 +183,7 @@ class EmrFleetCreateClusterOperator(
     c
   }
 
-  def createClusterRequest: RunJobFlowRequest = {
+  def buildCreateClusterRequest: RunJobFlowRequest = {
     new RunJobFlowRequest()
       .withAdditionalInfo(additionalInfo.orNull)
       .withApplications(applications.map(a => new Application().withName(a)): _*)
@@ -205,7 +203,7 @@ class EmrFleetCreateClusterOperator(
 
   override def runTask(): TaskResult = {
     val r = withEmr {emr =>
-      emr.runJobFlow(createClusterRequest)
+      emr.runJobFlow(buildCreateClusterRequest)
     }
     logger.info(s"""Create Cluster => Request Accepted: ${r.getJobFlowId}""")
 
