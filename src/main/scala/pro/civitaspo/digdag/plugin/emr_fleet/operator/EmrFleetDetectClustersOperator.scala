@@ -3,6 +3,7 @@ package pro.civitaspo.digdag.plugin.emr_fleet.operator
 import java.util.Date
 
 import com.amazonaws.services.elasticmapreduce.model.{ClusterState, ClusterSummary, ListClustersRequest, ListClustersResult}
+import com.amazonaws.services.elasticmapreduce.model.ClusterState.{RUNNING, WAITING}
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
@@ -22,9 +23,9 @@ class EmrFleetDetectClustersOperator(
   protected val durationAfterCreated: DurationParam = params.get("duration_after_created", classOf[DurationParam], createdWithin)
   protected val regexp: String = params.get("regexp", classOf[String], ".*")
   protected val states: Seq[ClusterState] = {
-    val list = params.getListOrEmpty("states", classOf[String])
-    if (list.isEmpty) Seq(ClusterState.RUNNING, ClusterState.WAITING)
-    else list.asScala.map(ClusterState.fromValue)
+    val seq = params.getListOrEmpty("states", classOf[ClusterState]).asScala
+    if (seq.isEmpty) Seq(RUNNING, WAITING)
+    else seq
   }
 
   override def runTask(): TaskResult = {
