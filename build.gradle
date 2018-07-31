@@ -5,7 +5,7 @@ plugins {
     id "com.diffplug.gradle.spotless" version "3.13.0"
 }
 
-group = 'pro.civitaspo.digdag.plugin'
+group = 'pro.civitaspo'
 version = '0.0.1'
 
 def digdagVersion = '0.9.27'
@@ -29,8 +29,8 @@ dependencies {
     compile group: 'org.scala-lang', name: 'scala-library', version: scalaSemanticVersion
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-emr
     compile group: 'com.amazonaws', name: 'aws-java-sdk-emr', version: awsSdkVersion
-    // https://mvnrepository.com/artifact/org.wvlet.airframe/airframe-log
-    compile group: 'org.wvlet.airframe', name: "airframe-log_${depScalaVersion}", version: '0.52'
+    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-sts
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: awsSdkVersion
 }
 
 shadowJar {
