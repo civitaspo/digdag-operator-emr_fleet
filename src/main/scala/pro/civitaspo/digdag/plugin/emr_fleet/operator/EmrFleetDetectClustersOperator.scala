@@ -11,12 +11,8 @@ import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
 
-
-class EmrFleetDetectClustersOperator(
-  context: OperatorContext,
-  systemConfig: Config,
-  templateEngine: TemplateEngine
-) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
+class EmrFleetDetectClustersOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
+    extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
   protected val timezone: String = params.get("timezone", classOf[String])
   protected val createdWithin: DurationParam = params.get("created_within", classOf[DurationParam])
@@ -32,7 +28,7 @@ class EmrFleetDetectClustersOperator(
     val clusters = detectClusters()
 
     val isDetected = clusters.nonEmpty
-    val detectedClusterSummaries = clusters.map {cs =>
+    val detectedClusterSummaries = clusters.map { cs =>
       val p = clusterSummaryToStoreParams(cs)
       logger.info(s"""[$operatorName] detected: ${p}""")
       p
@@ -76,7 +72,7 @@ class EmrFleetDetectClustersOperator(
       .withCreatedAfter(createdAfter)
     maker match {
       case Some(x) => req.setMarker(x)
-      case None =>  // Do nothing
+      case None => // Do nothing
     }
     val result: ListClustersResult = withEmr(_.listClusters(req))
     val builder = Seq.newBuilder[ClusterSummary]
@@ -84,7 +80,7 @@ class EmrFleetDetectClustersOperator(
 
     Option(result.getMarker) match {
       case Some(x) => detectClusters(maker = Some(x)).foreach(cs => builder += cs)
-      case None =>  // Do nothing
+      case None => // Do nothing
     }
     builder.result()
   }

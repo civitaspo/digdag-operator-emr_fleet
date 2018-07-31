@@ -1,6 +1,25 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
-import com.amazonaws.services.elasticmapreduce.model.{Application, BootstrapActionConfig, ClusterState, Configuration, EbsBlockDeviceConfig, EbsConfiguration, InstanceFleetConfig, InstanceFleetProvisioningSpecifications, InstanceFleetType, InstanceTypeConfig, JobFlowInstancesConfig, PlacementType, RunJobFlowRequest, ScriptBootstrapActionConfig, SpotProvisioningSpecification, SpotProvisioningTimeoutAction, Tag, VolumeSpecification}
+import com.amazonaws.services.elasticmapreduce.model.{
+  Application,
+  BootstrapActionConfig,
+  ClusterState,
+  Configuration,
+  EbsBlockDeviceConfig,
+  EbsConfiguration,
+  InstanceFleetConfig,
+  InstanceFleetProvisioningSpecifications,
+  InstanceFleetType,
+  InstanceTypeConfig,
+  JobFlowInstancesConfig,
+  PlacementType,
+  RunJobFlowRequest,
+  ScriptBootstrapActionConfig,
+  SpotProvisioningSpecification,
+  SpotProvisioningTimeoutAction,
+  Tag,
+  VolumeSpecification
+}
 import com.amazonaws.services.elasticmapreduce.model.ClusterState.{RUNNING, TERMINATED, TERMINATED_WITH_ERRORS, TERMINATING, WAITING}
 import com.amazonaws.services.elasticmapreduce.model.InstanceFleetType.{CORE, MASTER, TASK}
 import com.amazonaws.services.elasticmapreduce.model.SpotProvisioningTimeoutAction.TERMINATE_CLUSTER
@@ -12,11 +31,8 @@ import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
 
-class EmrFleetCreateClusterOperator(
-  context: OperatorContext,
-  systemConfig: Config,
-  templateEngine: TemplateEngine
-) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
+class EmrFleetCreateClusterOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
+    extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
   protected val clusterName: String = params.get("name", classOf[String], s"digdag-${params.get("session_uuid", classOf[String])}")
   protected val tags: Map[String, String] = params.getMapOrEmpty("tags", classOf[String], classOf[String]).asScala.toMap
@@ -54,8 +70,12 @@ class EmrFleetCreateClusterOperator(
     if (blockDuration.isPresent) {
       val bd: Int = blockDuration.get().getDuration.toMinutes.toInt
       if (!Seq[Int](1, 2, 3, 4, 5, 6).map(_ * 60).contains(bd)) {
-        logger.warn(s"""[$operatorName] "1h", "2h", "3h", "4h", "5h", or "6h" are allowed for `block_duration`, so "${blockDuration.get().toString}" is invalid.""")
-        logger.warn(s"""[$operatorName] `$operatorName` operator respects the options you set, but the behaviour depends on AWS. See the document ( https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-instance-fleet.html )""")
+        logger.warn(
+          s"""[$operatorName] "1h", "2h", "3h", "4h", "5h", or "6h" are allowed for `block_duration`, so "${blockDuration.get().toString}" is invalid."""
+        )
+        logger.warn(
+          s"""[$operatorName] `$operatorName` operator respects the options you set, but the behaviour depends on AWS. See the document ( https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-instance-fleet.html )"""
+        )
       }
       s.setBlockDurationMinutes(blockDuration.get().getDuration.toMinutes.toInt)
     }
@@ -133,14 +153,15 @@ class EmrFleetCreateClusterOperator(
 
     new EbsConfiguration()
       .withEbsOptimized(isOptimized)
-      .withEbsBlockDeviceConfigs(new EbsBlockDeviceConfig()
+      .withEbsBlockDeviceConfigs(
+        new EbsBlockDeviceConfig()
           .withVolumesPerInstance(volumesPerInstance)
           .withVolumeSpecification(volumeSpecification)
       )
   }
 
   protected def configureApplicationConfiguration(applicationConfiguration: Config): Configuration = {
-    val ac = applicationConfiguration  // to shorten var name
+    val ac = applicationConfiguration // to shorten var name
     val classification: String = ac.get("classification", classOf[String])
     val properties: Map[String, String] = ac.getMapOrEmpty("properties", classOf[String], classOf[String]).asScala.toMap
     val configurations: Seq[Config] = ac.getListOrEmpty("configurations", classOf[Config]).asScala
@@ -160,7 +181,8 @@ class EmrFleetCreateClusterOperator(
 
     new BootstrapActionConfig()
       .withName(name)
-      .withScriptBootstrapAction(new ScriptBootstrapActionConfig()
+      .withScriptBootstrapAction(
+        new ScriptBootstrapActionConfig()
           .withPath(path)
           .withArgs(args: _*)
       )
@@ -216,7 +238,7 @@ class EmrFleetCreateClusterOperator(
   }
 
   override def runTask(): TaskResult = {
-    val r = withEmr {emr =>
+    val r = withEmr { emr =>
       emr.runJobFlow(buildCreateClusterRequest)
     }
     logger.info(s"""[$operatorName] The request to create a cluster is accepted: ${r.getJobFlowId}""")
@@ -244,7 +266,7 @@ class EmrFleetCreateClusterOperator(
 
     p.set("auth_method", authMethod)
     p.set("profile_name", profileName)
-    if (profileFile.isPresent)p.set("profile_file", profileFile.get())
+    if (profileFile.isPresent) p.set("profile_file", profileFile.get())
     p.set("use_http_proxy", useHttpProxy)
     if (region.isPresent) p.set("region", region.get())
     if (endpoint.isPresent) p.set("endpoint", endpoint.get())
