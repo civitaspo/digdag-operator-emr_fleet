@@ -68,6 +68,12 @@ _export:
     emr_fleet.shutdown_cluster>: ${emr_fleet.last_cluster.id}
 ```
 
+# Concept
+
+* Configuable for complicated EMR Cluster
+* Available for credentials on servers if server administrators allow the operation
+* Small processing that a operator has
+
 # Configuration
 
 ## Remarks
