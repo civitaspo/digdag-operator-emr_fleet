@@ -45,14 +45,21 @@ class EmrFleetCreateClusterOperator(
   val waitTimeoutDuration: DurationParam = params.get("wait_timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
 
   lazy val instanceFleetProvisioningSpecifications: InstanceFleetProvisioningSpecifications = {
-    val blockDurationMinutes: Optional[Int] = spotSpec.getOptional("block_duration_minutes", classOf[Int])
+    val blockDuration: Optional[DurationParam] = spotSpec.getOptional("block_duration", classOf[DurationParam])
     val timeoutAction: String = spotSpec.get("timeout_action", classOf[String], "TERMINATE_CLUSTER")
-    val timeoutDurationMinutes: Int = spotSpec.get("timeout_duration_minutes", classOf[Int], 45)
+    val timeoutDuration: DurationParam = spotSpec.get("timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
 
     val s = new SpotProvisioningSpecification()
-    if (blockDurationMinutes.isPresent) s.setBlockDurationMinutes(blockDurationMinutes.get())
+    if (blockDuration.isPresent) {
+      val bd: Int = blockDuration.get().getDuration.toMinutes.toInt
+      if (!Seq[Int](1, 2, 3, 4, 5, 6).map(_ * 60).contains(bd)) {
+        logger.warn(s"""[$operatorName] "1h", "2h", "3h", "4h", "5h", or "6h" are allowed for `block_duration`, so "${blockDuration.get().toString}" is invalid.""")
+        logger.warn(s"""[$operatorName] `$operatorName` operator respects the options you set, but the behaviour depends on AWS. See the document ( https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-instance-fleet.html )""")
+      }
+      s.setBlockDurationMinutes(blockDuration.get().getDuration.toMinutes.toInt)
+    }
     s.setTimeoutAction(SpotProvisioningTimeoutAction.fromValue(timeoutAction))
-    s.setTimeoutDurationMinutes(timeoutDurationMinutes)
+    s.setTimeoutDurationMinutes(timeoutDuration.getDuration.toMinutes.toInt)
 
     new InstanceFleetProvisioningSpecifications().withSpotSpecification(s)
   }
@@ -211,7 +218,7 @@ class EmrFleetCreateClusterOperator(
     val r = withEmr {emr =>
       emr.runJobFlow(buildCreateClusterRequest)
     }
-    logger.info(s"""Create Cluster => Request Accepted: ${r.getJobFlowId}""")
+    logger.info(s"""[$operatorName] The request to create a cluster is accepted: ${r.getJobFlowId}""")
 
     val p = newEmptyParams
     p.getNestedOrSetEmpty("emr_fleet").getNestedOrSetEmpty("last_cluster").set("id", r.getJobFlowId)
@@ -219,7 +226,10 @@ class EmrFleetCreateClusterOperator(
     val builder = TaskResult.defaultBuilder(request)
     builder.storeParams(p)
     builder.resetStoreParams(ImmutableList.of(ConfigKey.of("emr_fleet", "last_cluster")))
-    if (waitAvailableState) builder.subtaskConfig(buildWaiterSubTaskConfig(r.getJobFlowId))
+    if (waitAvailableState) {
+      logger.info(s"""[$operatorName] run a sub task: emr_fleet.wait_cluster""")
+      builder.subtaskConfig(buildWaiterSubTaskConfig(r.getJobFlowId))
+    }
     builder.build()
   }
 

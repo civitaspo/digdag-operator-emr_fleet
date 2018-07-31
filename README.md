@@ -17,37 +17,62 @@ _export:
       - https://jitpack.io
     dependencies:
       - pro.civitaspo.digdag.plugin:digdag-operator-emr_fleet:0.0.1
+  emr_fleet:
+    auth_method: profile
 
-+task1:
++step1:
   emr_fleet.create_cluster>:
-  name: my-cluster
-  master:
+  tags:
+    environment: test
+  spot_spec:
+    block_duration: 1h
+  master_fleet:
+    bid_percentage: 60
     candidates:
-      - instance_type: r4.xlarge
-      - instance_type: m5.xlarge
-  core:
-    target_capacity: 128
+      - instance_type: r3.xlarge
+      - instance_type: m3.xlarge
+  core_fleet:
+    target_capacity: 192
+    bid_percentage: 60
     candidates:
-      - instance_type: r4.8xlarge
+      - instance_type: r3.8xlarge
         spot_units: 32
-      - instance_type: r4.16xlarge
-        spot_units: 64
-      - instance_type: r4.4xlarge
+        ebs:
+          optimized: false
+      - instance_type: r3.4xlarge
         spot_units: 16
-  release_label: emr-5.16.0
-  applications:
-    - Hadoop
-    - Spark
-    - Livy
-    
-+task2:
-  emr_fleet.detect_clusters>:
-  hours_created_within: 3
+  applications: [Hadoop, Spark, Livy]
+  configurations:
+    - classification: spark-defaults
+      properties:
+        maximizeResourceAllocation: true
+    - classification: capacity-scheduler
+      properties:
+        yarn.scheduler.capacity.resource-calculator: org.apache.hadoop.yarn.util.resource.DominantResourceCalculator
 
-+task3:
++step2:
+  echo>: ${emr_fleet.last_cluster}
+
++step3:
+  emr_fleet.detect_clusters>:
+  created_within: 1h
+  regexp: .*${session_uuid}.*
+
++step4:
   emr_fleet.shutdown_cluster>: ${emr_fleet.last_cluster.id}
 
++step5:
+  emr_fleet.wait_cluster>: ${emr_fleet.last_cluster.id}
+  success_states: [TERMINATED]
+  _error:
+    emr_fleet.shutdown_cluster>: ${emr_fleet.last_cluster.id}
 ```
+
+# Concept
+
+* Configuable for complicated EMR Cluster
+* Available for credentials on servers if server administrators allow the operation
+* Small processing that a operator has
 
 # Configuration
 
@@ -67,7 +92,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **emr_fleet.allow_auth_method_instance**: Indicates whether users can use **auth_method** `"instance"` (boolean, default: `false`)
 - **emr_fleet.allow_auth_method_profile**: Indicates whether users can use **auth_method** `"profile"` (boolean, default: `false`)
 - **emr_fleet.allow_auth_method_properties**: Indicates whether users can use **auth_method** `"properties"` (boolean, default: `false`)
-- **emr_fleet.assume_role_timeout_seconds**: Maximum Seconds which server administer allows when users assume **role_arn**. (integer, default: `3600`)
+- **emr_fleet.assume_role_timeout_duration**: Maximum duration which server administer allows when users assume **role_arn**. (`DurationParam`, default: `1h`)
 
 ### Secrets
 
@@ -112,9 +137,9 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **subnet_ids**: Applies to clusters that use the instance fleet configuration. When multiple EC2 subnet IDs are specified, Amazon EMR evaluates them and launches instances in the optimal subnet. (array of string, optional)
 - **availability_zones**: When multiple Availability Zones are specified, Amazon EMR evaluates them and launches instances in the optimal Availability Zone. (array of string, optional)
 - **spot_spec**: The launch specification for Spot instances in the instance fleet, which determines the defined duration and provisioning timeout behavior. (map, default: `{}`)
-  - **block_duration_minutes**: The defined duration for Spot instances (also known as Spot blocks) in minutes. When specified, the Spot instance does not terminate before the defined duration expires, and defined duration pricing for Spot instances applies. Valid values are 60, 120, 180, 240, 300, or 360. The duration period starts as soon as a Spot instance receives its instance ID. At the end of the duration, Amazon EC2 marks the Spot instance for termination and provides a Spot instance termination notice, which gives the instance a two-minute warning before it terminates. (integer, optional)
-  - **timeout_action**: The action to take when **target_spot_capacity** has not been fulfilled when the **timeout_duration_minutes** has expired. Spot instances are not uprovisioned within the Spot provisioining timeout. Valid values are `TERMINATE_CLUSTER` and `SWITCH_TO_ON_DEMAND`. `SWITCH_TO_ON_DEMAND` specifies that if no Spot instances are available, On-Demand Instances should be provisioned to fulfill any remaining Spot capacity. (string, default: `TERMINATE_CLUSTER`)
-  - **timeout_duration_minutes**: The spot provisioning timeout period in minutes. If Spot instances are not provisioned within this time period, the **timeout_action** is taken. Minimum value is 5 and maximum value is 1440. The timeout applies only during initial provisioning, when the cluster is first created. (integer, default: `45`)
+  - **block_duration**: The defined duration for Spot instances (also known as Spot blocks). When specified, the Spot instance does not terminate before the defined duration expires, and defined duration pricing for Spot instances applies. Current valid values are `"1h"`, `"2h"`, `"3h"`, `"4h"`, `"5h"`, or `"6h"`. The duration period starts as soon as a Spot instance receives its instance ID. At the end of the duration, Amazon EC2 marks the Spot instance for termination and provides a Spot instance termination notice, which gives the instance a two-minute warning before it terminates. (`DurationParam`, optional)
+  - **timeout_action**: The action to take when **target_spot_capacity** has not been fulfilled when the **timeout_duration** has expired. Spot instances are not uprovisioned within the Spot provisioining timeout. Valid values are `TERMINATE_CLUSTER` and `SWITCH_TO_ON_DEMAND`. `SWITCH_TO_ON_DEMAND` specifies that if no Spot instances are available, On-Demand Instances should be provisioned to fulfill any remaining Spot capacity. (string, default: `TERMINATE_CLUSTER`)
+  - **timeout_duration**: The spot provisioning timeout period. If Spot instances are not provisioned within this time period, the **timeout_action** is taken. Minimum value is `"5m"` and maximum value is `"1d"`. The timeout applies only during initial provisioning, when the cluster is first created. (`DurationParam`, default: `45m`)
 - **master_fleet**: Describes the EC2 instances and instance configurations for master node that use the instance fleet configuration. (map, required)
   - **name**: The friendly name of the instance fleet. (string, default: `master instance fleet`)
   - **use_spot_instance**: Indicates whether master node uses Spot instance or On-Demand instance. (boolean, default: `true`)
@@ -218,7 +243,8 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Options
 
-- **hours_created_within**: Number of hours clusters created within. (integer, required)
+- **created_within**: Duration clusters created within. (`DurationParam`, required)
+- **duration_after_created**: Duration after clusters are created. (`DurationParam`, default: **created_within**)
 - **regexp**: Regular expression to filter listing clusters. (string, default: `".*"`)
 - **states**: The cluster states filters to apply when listing clusters. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, default: `["RUNNING", "WAITING"]`)
 
@@ -242,11 +268,6 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   ]
   ```
 
-# TODOs
-
-- no Step Configurations
-- no Kerberos Configurations
-
 # Note
 
 - Only emr-5.10.0 or larger releases are supported.
@@ -264,20 +285,19 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 Artifacts are build on local repos: `./build/repo`.
 
-### 2) run an example
+### 2) get your aws profile
 
 ```sh
-digdag selfupdate
-
-## Remove cache 
-rm -rf .digdag
-
-digdag run --project sample plugin.dig -p repos=`pwd`/build/repo
+aws configure
 ```
 
-You'll find the result of the task in `./sample/example.out`.
+### 3) run an example
 
-## Run Tests
+```sh
+./example/run.sh
+```
+
+## (TODO) Run Tests
 
 ```sh
 ./gradlew test

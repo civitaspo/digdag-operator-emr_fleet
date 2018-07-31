@@ -6,6 +6,7 @@ import com.amazonaws.services.elasticmapreduce.model.{ClusterState, ClusterSumma
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
+import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
 
@@ -17,7 +18,8 @@ class EmrFleetDetectClustersOperator(
 ) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
   val timezone: String = params.get("timezone", classOf[String])
-  val hoursCreatedWithin: Int = params.get("hours_created_within", classOf[Int])
+  val createdWithin: DurationParam = params.get("created_within", classOf[DurationParam])
+  val durationAfterCreated: DurationParam = params.get("duration_after_created", classOf[DurationParam], createdWithin)
   val regexp: String = params.get("regexp", classOf[String], ".*")
   val states: Seq[ClusterState] = {
     val list = params.getListOrEmpty("states", classOf[String])
@@ -31,7 +33,7 @@ class EmrFleetDetectClustersOperator(
     val isDetected = clusters.nonEmpty
     val detectedClusterSummaries = clusters.map {cs =>
       val p = clusterSummaryToStoreParams(cs)
-      logger.info(s"detected => ${p}")
+      logger.info(s"""[$operatorName] detected: ${p}""")
       p
     }
 
@@ -69,6 +71,7 @@ class EmrFleetDetectClustersOperator(
   private def detectClusters(maker: Option[String] = None): Seq[ClusterSummary] = {
     val req = new ListClustersRequest()
       .withClusterStates(states: _*)
+      .withCreatedBefore(createdBefore)
       .withCreatedAfter(createdAfter)
     maker match {
       case Some(x) => req.setMarker(x)
@@ -85,8 +88,14 @@ class EmrFleetDetectClustersOperator(
     builder.result()
   }
 
+  private def createdBefore: Date = {
+    val minusMillis: Long = createdWithin.getDuration.toMillis
+    val plusMillis: Long = durationAfterCreated.getDuration.toMillis
+    new Date(System.currentTimeMillis() - minusMillis + plusMillis)
+  }
+
   private def createdAfter: Date = {
-    val minusMillis: Long = hoursCreatedWithin * 3600 * 1000
+    val minusMillis: Long = createdWithin.getDuration.toMillis
     new Date(System.currentTimeMillis() - minusMillis)
   }
 }

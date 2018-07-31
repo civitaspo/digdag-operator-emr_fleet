@@ -11,7 +11,7 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
 import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{OperatorContext, SecretProvider, TemplateEngine}
-import io.digdag.util.BaseOperator
+import io.digdag.util.{BaseOperator, DurationParam}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.Try
@@ -32,7 +32,7 @@ abstract class AbstractEmrFleetOperator(
   protected val isAllowedAuthMethodInstance: Boolean = systemConfig.get("emr_fleet.allow_auth_method_instance", classOf[Boolean], false)
   protected val isAllowedAuthMethodProfile: Boolean = systemConfig.get("emr_fleet.allow_auth_method_profile", classOf[Boolean], false)
   protected val isAllowedAuthMethodProperties: Boolean = systemConfig.get("emr_fleet.allow_auth_method_properties", classOf[Boolean], false)
-  protected val assumeRoleTimeoutSeconds: Int = systemConfig.get("emr_fleet.assume_role_timeout_seconds", classOf[Int], 3600)
+  protected val assumeRoleTimeoutDuration: DurationParam = systemConfig.get("emr_fleet.assume_role_timeout_duration", classOf[DurationParam], DurationParam.parse("1h"))
 
   protected val accessKeyId: Optional[String] = secrets.getSecretOptional("access_key_id")
   protected val secretAccessKey: Optional[String] = secrets.getSecretOptional("secret_access_key")
@@ -41,6 +41,8 @@ abstract class AbstractEmrFleetOperator(
   protected val roleSessionName: String = secrets.getSecretOptional("role_session_name")
     .or(s"digdag-emr_fleet-${params.get("session_uuid", classOf[String])}")
   protected val httpProxy: SecretProvider = secrets.getSecrets("http_proxy")
+
+  protected val operatorName: String = params.get("_type", classOf[String])
 
   protected val authMethod: String = params.get("auth_method", classOf[String], "basic")
   protected val profileName: String = params.get("profile_name", classOf[String], "default")
@@ -99,7 +101,7 @@ abstract class AbstractEmrFleetOperator(
       case "anonymous" => anonymousAuthMethodAWSCredentialsProvider
       case "session" => sessionAuthMethodAWSCredentialsProvider
       case _ =>
-        throw new ConfigException(s"""auth_method: "$authMethod" is not supported. available `auth_method`s are "basic", "env", "instance", "profile", "properties", "anonymous", or "session".""")
+        throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not supported. available `auth_method`s are "basic", "env", "instance", "profile", "properties", "anonymous", or "session".""")
     }
   }
 
@@ -114,7 +116,7 @@ abstract class AbstractEmrFleetOperator(
 
     val role = sts.assumeRole(new AssumeRoleRequest()
       .withRoleArn(roleArn.get())
-      .withDurationSeconds(assumeRoleTimeoutSeconds)
+      .withDurationSeconds(assumeRoleTimeoutDuration.getDuration.getSeconds.toInt)
       .withRoleSessionName(roleSessionName)
     )
     val credentials = new BasicSessionCredentials(
@@ -126,32 +128,32 @@ abstract class AbstractEmrFleetOperator(
   }
 
   private def basicAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!accessKeyId.isPresent) throw new ConfigException(s"""`access_key_id` must be set when `auth_method` is "$authMethod".""")
-    if (!secretAccessKey.isPresent) throw new ConfigException(s"""`secret_access_key` must be set when `auth_method` is "$authMethod".""")
+    if (!accessKeyId.isPresent) throw new ConfigException(s"""[$operatorName] `access_key_id` must be set when `auth_method` is "$authMethod".""")
+    if (!secretAccessKey.isPresent) throw new ConfigException(s"""[$operatorName] `secret_access_key` must be set when `auth_method` is "$authMethod".""")
     val credentials: AWSCredentials = new BasicAWSCredentials(accessKeyId.get(), secretAccessKey.get())
     new AWSStaticCredentialsProvider(credentials)
   }
 
   private def envAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!isAllowedAuthMethodEnv) throw new ConfigException(s"""auth_method: "$authMethod" is not allowed.""")
+    if (!isAllowedAuthMethodEnv) throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not allowed.""")
     new EnvironmentVariableCredentialsProvider
   }
 
   private def instanceAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!isAllowedAuthMethodInstance) throw new ConfigException(s"""auth_method: "$authMethod" is not allowed.""")
+    if (!isAllowedAuthMethodInstance) throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not allowed.""")
     // NOTE: combination of InstanceProfileCredentialsProvider and ContainerCredentialsProvider
     new EC2ContainerCredentialsProviderWrapper
   }
 
   private def profileAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!isAllowedAuthMethodProfile) throw new ConfigException(s"""auth_method: "$authMethod" is not allowed.""")
+    if (!isAllowedAuthMethodProfile) throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not allowed.""")
     if (!profileFile.isPresent) return new ProfileCredentialsProvider(profileName)
     val pf: ProfilesConfigFile = new ProfilesConfigFile(profileFile.get())
     new ProfileCredentialsProvider(pf, profileName)
   }
 
   private def propertiesAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!isAllowedAuthMethodProperties) throw new ConfigException(s"""auth_method: "$authMethod" is not allowed.""")
+    if (!isAllowedAuthMethodProperties) throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not allowed.""")
     new SystemPropertiesCredentialsProvider()
   }
 
@@ -161,9 +163,9 @@ abstract class AbstractEmrFleetOperator(
   }
 
   private def sessionAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!accessKeyId.isPresent) throw new ConfigException(s"""`access_key_id` must be set when `auth_method` is "$authMethod".""")
-    if (!secretAccessKey.isPresent) throw new ConfigException(s"""`secret_access_key` must be set when `auth_method` is "$authMethod".""")
-    if (!sessionToken.isPresent) throw new ConfigException(s"""`session_token` must be set when `auth_method` is "$authMethod".""")
+    if (!accessKeyId.isPresent) throw new ConfigException(s"""[$operatorName] `access_key_id` must be set when `auth_method` is "$authMethod".""")
+    if (!secretAccessKey.isPresent) throw new ConfigException(s"""[$operatorName] `secret_access_key` must be set when `auth_method` is "$authMethod".""")
+    if (!sessionToken.isPresent) throw new ConfigException(s"""[$operatorName] `session_token` must be set when `auth_method` is "$authMethod".""")
     val credentials: AWSCredentials = new BasicSessionCredentials(accessKeyId.get(), secretAccessKey.get(), sessionToken.get())
     new AWSStaticCredentialsProvider(credentials)
   }
@@ -176,7 +178,7 @@ abstract class AbstractEmrFleetOperator(
     val protocol: Protocol = httpProxy.getSecretOptional("scheme").or("https") match {
       case "http" => Protocol.HTTP
       case "https" => Protocol.HTTPS
-      case _ => throw new ConfigException("""`emr_fleet.http_proxy.scheme` must be "http" or "https".""")
+      case _ => throw new ConfigException(s"""[$operatorName] `emr_fleet.http_proxy.scheme` must be "http" or "https".""")
     }
     val user: Optional[String] = httpProxy.getSecretOptional("user")
     val password: Optional[String] = httpProxy.getSecretOptional("password")
