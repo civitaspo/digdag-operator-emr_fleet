@@ -1,7 +1,17 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
 import com.amazonaws.{ClientConfiguration, Protocol}
-import com.amazonaws.auth.{AnonymousAWSCredentials, AWSCredentials, AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicAWSCredentials, BasicSessionCredentials, EC2ContainerCredentialsProviderWrapper, EnvironmentVariableCredentialsProvider, SystemPropertiesCredentialsProvider}
+import com.amazonaws.auth.{
+  AnonymousAWSCredentials,
+  AWSCredentials,
+  AWSCredentialsProvider,
+  AWSStaticCredentialsProvider,
+  BasicAWSCredentials,
+  BasicSessionCredentials,
+  EC2ContainerCredentialsProviderWrapper,
+  EnvironmentVariableCredentialsProvider,
+  SystemPropertiesCredentialsProvider
+}
 import com.amazonaws.auth.profile.{ProfileCredentialsProvider, ProfilesConfigFile}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
@@ -16,30 +26,24 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.Try
 
-abstract class AbstractEmrFleetOperator(
-  context: OperatorContext,
-  systemConfig: Config,
-  templateEngine: TemplateEngine
-) extends BaseOperator(context) {
+abstract class AbstractEmrFleetOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine) extends BaseOperator(context) {
 
   protected val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  protected val params: Config = request.getConfig.mergeDefault(
-    request.getConfig.getNestedOrGetEmpty("emr_fleet")
-  )
+  protected val params: Config = request.getConfig.mergeDefault(request.getConfig.getNestedOrGetEmpty("emr_fleet"))
   protected val secrets: SecretProvider = context.getSecrets.getSecrets("emr_fleet")
 
   protected val isAllowedAuthMethodEnv: Boolean = systemConfig.get("emr_fleet.allow_auth_method_env", classOf[Boolean], false)
   protected val isAllowedAuthMethodInstance: Boolean = systemConfig.get("emr_fleet.allow_auth_method_instance", classOf[Boolean], false)
   protected val isAllowedAuthMethodProfile: Boolean = systemConfig.get("emr_fleet.allow_auth_method_profile", classOf[Boolean], false)
   protected val isAllowedAuthMethodProperties: Boolean = systemConfig.get("emr_fleet.allow_auth_method_properties", classOf[Boolean], false)
-  protected val assumeRoleTimeoutDuration: DurationParam = systemConfig.get("emr_fleet.assume_role_timeout_duration", classOf[DurationParam], DurationParam.parse("1h"))
+  protected val assumeRoleTimeoutDuration: DurationParam =
+    systemConfig.get("emr_fleet.assume_role_timeout_duration", classOf[DurationParam], DurationParam.parse("1h"))
 
   protected val accessKeyId: Optional[String] = secrets.getSecretOptional("access_key_id")
   protected val secretAccessKey: Optional[String] = secrets.getSecretOptional("secret_access_key")
   protected val sessionToken: Optional[String] = secrets.getSecretOptional("session_token")
   protected val roleArn: Optional[String] = secrets.getSecretOptional("role_arn")
-  protected val roleSessionName: String = secrets.getSecretOptional("role_session_name")
-    .or(s"digdag-emr_fleet-${params.get("session_uuid", classOf[String])}")
+  protected val roleSessionName: String = secrets.getSecretOptional("role_session_name").or(s"digdag-emr_fleet-${params.get("session_uuid", classOf[String])}")
   protected val httpProxy: SecretProvider = secrets.getSecrets("http_proxy")
 
   protected val operatorName: String = params.get("_type", classOf[String])
@@ -57,16 +61,13 @@ abstract class AbstractEmrFleetOperator(
 
   protected def withEmr[T](f: AmazonElasticMapReduce => T): T = {
     val emr = buildEmr
-    try {
-      f(emr)
-    }
-    finally {
-      emr.shutdown()
-    }
+    try f(emr)
+    finally emr.shutdown()
   }
 
   private def buildEmr: AmazonElasticMapReduce = {
-    val builder = AmazonElasticMapReduceClientBuilder.standard()
+    val builder = AmazonElasticMapReduceClientBuilder
+      .standard()
       .withClientConfiguration(clientConfiguration)
       .withCredentials(credentialsProvider)
 
@@ -101,29 +102,28 @@ abstract class AbstractEmrFleetOperator(
       case "anonymous" => anonymousAuthMethodAWSCredentialsProvider
       case "session" => sessionAuthMethodAWSCredentialsProvider
       case _ =>
-        throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not supported. available `auth_method`s are "basic", "env", "instance", "profile", "properties", "anonymous", or "session".""")
+        throw new ConfigException(
+          s"""[$operatorName] auth_method: "$authMethod" is not supported. available `auth_method`s are "basic", "env", "instance", "profile", "properties", "anonymous", or "session"."""
+        )
     }
   }
 
-  private def assumeRoleCredentialsProvider(
-    credentialsProviderToAssumeRole: AWSCredentialsProvider
-  ): AWSCredentialsProvider = {
+  private def assumeRoleCredentialsProvider(credentialsProviderToAssumeRole: AWSCredentialsProvider): AWSCredentialsProvider = {
     // TODO: require EndpointConfiguration so on ?
-    val sts = AWSSecurityTokenServiceClientBuilder.standard()
+    val sts = AWSSecurityTokenServiceClientBuilder
+      .standard()
       .withClientConfiguration(clientConfiguration)
       .withCredentials(credentialsProviderToAssumeRole)
       .build()
 
-    val role = sts.assumeRole(new AssumeRoleRequest()
-      .withRoleArn(roleArn.get())
-      .withDurationSeconds(assumeRoleTimeoutDuration.getDuration.getSeconds.toInt)
-      .withRoleSessionName(roleSessionName)
+    val role = sts.assumeRole(
+      new AssumeRoleRequest()
+        .withRoleArn(roleArn.get())
+        .withDurationSeconds(assumeRoleTimeoutDuration.getDuration.getSeconds.toInt)
+        .withRoleSessionName(roleSessionName)
     )
-    val credentials = new BasicSessionCredentials(
-      role.getCredentials.getAccessKeyId,
-      role.getCredentials.getSecretAccessKey,
-      role.getCredentials.getSessionToken
-    )
+    val credentials =
+      new BasicSessionCredentials(role.getCredentials.getAccessKeyId, role.getCredentials.getSecretAccessKey, role.getCredentials.getSessionToken)
     new AWSStaticCredentialsProvider(credentials)
   }
 

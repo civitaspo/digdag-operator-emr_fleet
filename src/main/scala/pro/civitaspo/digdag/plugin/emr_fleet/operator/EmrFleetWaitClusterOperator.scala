@@ -1,6 +1,14 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
-import com.amazonaws.services.elasticmapreduce.model.{Cluster, ClusterState, DescribeClusterRequest, DescribeClusterResult, Instance, InstanceFleetType, ListInstancesRequest}
+import com.amazonaws.services.elasticmapreduce.model.{
+  Cluster,
+  ClusterState,
+  DescribeClusterRequest,
+  DescribeClusterResult,
+  Instance,
+  InstanceFleetType,
+  ListInstancesRequest
+}
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskExecutionException, TaskResult, TemplateEngine}
@@ -8,11 +16,8 @@ import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
 
-class EmrFleetWaitClusterOperator(
-  context: OperatorContext,
-  systemConfig: Config,
-  templateEngine: TemplateEngine
-) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
+class EmrFleetWaitClusterOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
+    extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
   protected val clusterId: String = params.get("_command", classOf[String])
   protected val successStates: Seq[ClusterState] = params.getList("success_states", classOf[ClusterState]).asScala
@@ -44,7 +49,7 @@ class EmrFleetWaitClusterOperator(
       if (timeSpentSeconds >= timeoutSeconds) {
         throw new TaskExecutionException(s"""[$operatorName] timeout because of spent: ${timeSpentSeconds}s >= ${timeoutSeconds}s""")
       }
-      Thread.sleep(pollingIntervalSeconds * 1000)  // millis
+      Thread.sleep(pollingIntervalSeconds * 1000) // millis
     }
   }
 
@@ -62,19 +67,20 @@ class EmrFleetWaitClusterOperator(
   }
 
   protected def describeCluster: DescribeClusterResult = {
-     withEmr { emr =>
-       emr.describeCluster(
-         new DescribeClusterRequest()
-           .withClusterId(clusterId)
-       )
-     }
+    withEmr { emr =>
+      emr.describeCluster(
+        new DescribeClusterRequest()
+          .withClusterId(clusterId)
+      )
+    }
   }
 
   private def describeMasterInstance: Option[Instance] = {
     val list = withEmr { emr =>
-      emr.listInstances(new ListInstancesRequest()
-        .withClusterId(clusterId)
-        .withInstanceFleetType(InstanceFleetType.MASTER)
+      emr.listInstances(
+        new ListInstancesRequest()
+          .withClusterId(clusterId)
+          .withInstanceFleetType(InstanceFleetType.MASTER)
       )
     }
     val instances: Seq[Instance] = list.getInstances.asScala

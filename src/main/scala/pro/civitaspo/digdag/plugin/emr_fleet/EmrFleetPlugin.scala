@@ -6,7 +6,13 @@ import java.lang.reflect.Constructor
 import io.digdag.client.config.Config
 import io.digdag.spi.{Operator, OperatorContext, OperatorFactory, OperatorProvider, Plugin, TemplateEngine}
 import javax.inject.Inject
-import pro.civitaspo.digdag.plugin.emr_fleet.operator.{AbstractEmrFleetOperator, EmrFleetCreateClusterOperator, EmrFleetDetectClustersOperator, EmrFleetShutdownClusterOperator, EmrFleetWaitClusterOperator}
+import pro.civitaspo.digdag.plugin.emr_fleet.operator.{
+  AbstractEmrFleetOperator,
+  EmrFleetCreateClusterOperator,
+  EmrFleetDetectClustersOperator,
+  EmrFleetShutdownClusterOperator,
+  EmrFleetWaitClusterOperator
+}
 
 object EmrFleetPlugin {
 
@@ -28,9 +34,7 @@ object EmrFleetPlugin {
       new OperatorFactory {
         override def getType: String = operatorName
         override def newOperator(context: OperatorContext): Operator = {
-          val constructor: Constructor[T] = klass.getConstructor(
-            classOf[OperatorContext], classOf[Config], classOf[TemplateEngine]
-          )
+          val constructor: Constructor[T] = klass.getConstructor(classOf[OperatorContext], classOf[Config], classOf[TemplateEngine])
           constructor.newInstance(context, systemConfig, templateEngine)
         }
       }
