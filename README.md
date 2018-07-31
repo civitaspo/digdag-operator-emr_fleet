@@ -219,6 +219,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 ### Options
 
 - **created_within**: Duration clusters created within. (`DurationParam`, required)
+- **duration_after_created**: Duration after clusters are created. (`DurationParam`, default: **created_within**)
 - **regexp**: Regular expression to filter listing clusters. (string, default: `".*"`)
 - **states**: The cluster states filters to apply when listing clusters. Valid values are `"STARTING"`, `"BOOTSTRAPPING"`, `"RUNNING"`, `"WAITING"`, `"TERMINATING"`, `"TERMINATED"` and `"TERMINATED_WITH_ERRORS"`. (array of string, default: `["RUNNING", "WAITING"]`)
 

@@ -19,6 +19,7 @@ class EmrFleetDetectClustersOperator(
 
   val timezone: String = params.get("timezone", classOf[String])
   val createdWithin: DurationParam = params.get("created_within", classOf[DurationParam])
+  val durationAfterCreated: DurationParam = params.get("duration_after_created", classOf[DurationParam], createdWithin)
   val regexp: String = params.get("regexp", classOf[String], ".*")
   val states: Seq[ClusterState] = {
     val list = params.getListOrEmpty("states", classOf[String])
@@ -70,6 +71,7 @@ class EmrFleetDetectClustersOperator(
   private def detectClusters(maker: Option[String] = None): Seq[ClusterSummary] = {
     val req = new ListClustersRequest()
       .withClusterStates(states: _*)
+      .withCreatedBefore(createdBefore)
       .withCreatedAfter(createdAfter)
     maker match {
       case Some(x) => req.setMarker(x)
@@ -84,6 +86,12 @@ class EmrFleetDetectClustersOperator(
       case None =>  // Do nothing
     }
     builder.result()
+  }
+
+  private def createdBefore: Date = {
+    val minusMillis: Long = createdWithin.getDuration.toMillis
+    val plusMillis: Long = durationAfterCreated.getDuration.toMillis
+    new Date(System.currentTimeMillis() - minusMillis + plusMillis)
   }
 
   private def createdAfter: Date = {
