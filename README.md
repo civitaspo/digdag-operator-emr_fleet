@@ -262,11 +262,6 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   ]
   ```
 
-# TODOs
-
-- no Step Configurations
-- no Kerberos Configurations
-
 # Note
 
 - Only emr-5.10.0 or larger releases are supported.
@@ -296,7 +291,7 @@ aws configure
 ./example/run.sh
 ```
 
-## Run Tests
+## (TODO) Run Tests
 
 ```sh
 ./gradlew test
