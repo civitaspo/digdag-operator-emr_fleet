@@ -17,36 +17,55 @@ _export:
       - https://jitpack.io
     dependencies:
       - pro.civitaspo.digdag.plugin:digdag-operator-emr_fleet:0.0.1
+  emr_fleet:
+    auth_method: profile
 
-+task1:
++step1:
   emr_fleet.create_cluster>:
-  name: my-cluster
-  master:
+  tags:
+    environment: test
+  spot_spec:
+    block_duration: 1h
+  master_fleet:
+    bid_percentage: 60
     candidates:
-      - instance_type: r4.xlarge
-      - instance_type: m5.xlarge
-  core:
-    target_capacity: 128
+      - instance_type: r3.xlarge
+      - instance_type: m3.xlarge
+  core_fleet:
+    target_capacity: 192
+    bid_percentage: 60
     candidates:
-      - instance_type: r4.8xlarge
+      - instance_type: r3.8xlarge
         spot_units: 32
-      - instance_type: r4.16xlarge
-        spot_units: 64
-      - instance_type: r4.4xlarge
+        ebs:
+          optimized: false
+      - instance_type: r3.4xlarge
         spot_units: 16
-  release_label: emr-5.16.0
-  applications:
-    - Hadoop
-    - Spark
-    - Livy
-    
-+task2:
-  emr_fleet.detect_clusters>:
-  hours_created_within: 3
+  applications: [Hadoop, Spark, Livy]
+  configurations:
+    - classification: spark-defaults
+      properties:
+        maximizeResourceAllocation: true
+    - classification: capacity-scheduler
+      properties:
+        yarn.scheduler.capacity.resource-calculator: org.apache.hadoop.yarn.util.resource.DominantResourceCalculator
 
-+task3:
++step2:
+  echo>: ${emr_fleet.last_cluster}
+
++step3:
+  emr_fleet.detect_clusters>:
+  created_within: 1h
+  regexp: .*${session_uuid}.*
+
++step4:
   emr_fleet.shutdown_cluster>: ${emr_fleet.last_cluster.id}
 
++step5:
+  emr_fleet.wait_cluster>: ${emr_fleet.last_cluster.id}
+  success_states: [TERMINATED]
+  _error:
+    emr_fleet.shutdown_cluster>: ${emr_fleet.last_cluster.id}
 ```
 
 # Configuration
@@ -265,18 +284,17 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 Artifacts are build on local repos: `./build/repo`.
 
-### 2) run an example
+### 2) get your aws profile
 
 ```sh
-digdag selfupdate
-
-## Remove cache 
-rm -rf .digdag
-
-digdag run --project sample plugin.dig -p repos=`pwd`/build/repo
+aws configure
 ```
 
-You'll find the result of the task in `./sample/example.out`.
+### 3) run an example
+
+```sh
+./example/run.sh
+```
 
 ## Run Tests
 

@@ -1,0 +1,56 @@
+_export:
+  plugin:
+    repositories:
+      - file://${repos}
+      # - https://jitpack.io
+    dependencies:
+      - pro.civitaspo.digdag.plugin:digdag-operator-emr_fleet:0.0.1
+  emr_fleet:
+    auth_method: profile
+
++step1:
+  emr_fleet.create_cluster>:
+  tags:
+    environment: test
+  spot_spec:
+    block_duration: 1h
+  master_fleet:
+    bid_percentage: 60
+    candidates:
+      - instance_type: r3.xlarge
+      - instance_type: m3.xlarge
+  core_fleet:
+    target_capacity: 192
+    bid_percentage: 60
+    candidates:
+      - instance_type: r3.8xlarge
+        spot_units: 32
+        ebs:
+          optimized: false
+      - instance_type: r3.4xlarge
+        spot_units: 16
+  applications: [Hadoop, Spark, Livy]
+  configurations:
+    - classification: spark-defaults
+      properties:
+        maximizeResourceAllocation: true
+    - classification: capacity-scheduler
+      properties:
+        yarn.scheduler.capacity.resource-calculator: org.apache.hadoop.yarn.util.resource.DominantResourceCalculator
+
++step2:
+  echo>: ${emr_fleet.last_cluster}
+
++step3:
+  emr_fleet.detect_clusters>:
+  created_within: 1h
+  regexp: .*${session_uuid}.*
+
++step4:
+  emr_fleet.shutdown_cluster>: ${emr_fleet.last_cluster.id}
+
++step5:
+  emr_fleet.wait_cluster>: ${emr_fleet.last_cluster.id}
+  success_states: [TERMINATED]
+  _error:
+    emr_fleet.shutdown_cluster>: ${emr_fleet.last_cluster.id}
