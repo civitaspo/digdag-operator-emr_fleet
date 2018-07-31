@@ -5,7 +5,7 @@ plugins {
     id "com.diffplug.gradle.spotless" version "3.13.0"
 }
 
-group = 'pro.civitaspo.digdag.plugin'
+group = 'pro.civitaspo'
 version = '0.0.1'
 
 def digdagVersion = '0.9.27'
