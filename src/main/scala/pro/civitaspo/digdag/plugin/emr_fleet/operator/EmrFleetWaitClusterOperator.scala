@@ -14,11 +14,11 @@ class EmrFleetWaitClusterOperator(
   templateEngine: TemplateEngine
 ) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
-  val clusterId: String = params.get("_command", classOf[String])
-  val successStates: Seq[ClusterState] = params.getList("success_states", classOf[ClusterState]).asScala
-  val errorStates: Seq[ClusterState] = params.getListOrEmpty("error_states", classOf[ClusterState]).asScala
-  val pollingInterval: DurationParam = params.get("polling_interval", classOf[DurationParam], DurationParam.parse("5s"))
-  val timeoutDuration: DurationParam = params.get("timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
+  protected val clusterId: String = params.get("_command", classOf[String])
+  protected val successStates: Seq[ClusterState] = params.getList("success_states", classOf[ClusterState]).asScala
+  protected val errorStates: Seq[ClusterState] = params.getListOrEmpty("error_states", classOf[ClusterState]).asScala
+  protected val pollingInterval: DurationParam = params.get("polling_interval", classOf[DurationParam], DurationParam.parse("5s"))
+  protected val timeoutDuration: DurationParam = params.get("timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
 
   override def runTask(): TaskResult = {
     pollingCluster()
@@ -48,7 +48,7 @@ class EmrFleetWaitClusterOperator(
     }
   }
 
-  private def pollCluster: Boolean = {
+  protected def pollCluster: Boolean = {
     val result: DescribeClusterResult = describeCluster
     val cluster: Cluster = result.getCluster
     val state: ClusterState = ClusterState.fromValue(cluster.getStatus.getState)
@@ -61,7 +61,7 @@ class EmrFleetWaitClusterOperator(
     successStates.exists(_.equals(state))
   }
 
-  private def describeCluster: DescribeClusterResult = {
+  protected def describeCluster: DescribeClusterResult = {
      withEmr { emr =>
        emr.describeCluster(
          new DescribeClusterRequest()
@@ -82,7 +82,7 @@ class EmrFleetWaitClusterOperator(
     Some(instances.head)
   }
 
-  private def storeParamMasterInstance(to: Config): Unit = {
+  protected def storeParamMasterInstance(to: Config): Unit = {
     describeMasterInstance match {
       case None =>
         logger.info(s"""[$operatorName] The cluster: $clusterId does not have the master node info yet.""")
