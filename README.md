@@ -1,5 +1,5 @@
 # digdag-operator-emr_fleet
-[![Jitpack](https://jitpack.io/v/pro.civitaspo/digdag-operator-emr_fleet.svg)](https://jitpack.io/#pro.civitaspo/digdag-operator-emr_fleet) [![CircleCI](https://circleci.com/gh/civitaspo/digdag-operator-emr_fleet.svg?style=svg)](https://circleci.com/gh/civitaspo/digdag-operator-emr_fleet) [![Digdag](https://img.shields.io/badge/digdag-v0.9.27-brightgreen.svg)](https://github.com/treasure-data/digdag/releases/tag/v0.9.27)
+[![Jitpack](https://jitpack.io/v/pro.civitaspo/digdag-operator-emr_fleet.svg)](https://jitpack.io/#pro.civitaspo/digdag-operator-emr_fleet) [![CircleCI](https://circleci.com/gh/civitaspo/digdag-operator-emr_fleet.svg?style=shield)](https://circleci.com/gh/civitaspo/digdag-operator-emr_fleet) [![Digdag](https://img.shields.io/badge/digdag-v0.9.27-brightgreen.svg)](https://github.com/treasure-data/digdag/releases/tag/v0.9.27)
 
 This operator is for operating a cluster with instance fleets on Amazon Elastic Map Reduce.
 
