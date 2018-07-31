@@ -10,7 +10,7 @@ class EmrFleetShutdownClusterOperator(
   templateEngine: TemplateEngine
 ) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
-  val clusterId: String = params.get("_command", classOf[String])
+  protected val clusterId: String = params.get("_command", classOf[String])
 
   override def runTask(): TaskResult = {
     withEmr(_.terminateJobFlows(new TerminateJobFlowsRequest().withJobFlowIds(clusterId)))

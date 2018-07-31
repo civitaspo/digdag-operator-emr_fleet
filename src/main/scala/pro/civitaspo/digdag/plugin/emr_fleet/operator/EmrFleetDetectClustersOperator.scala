@@ -3,6 +3,7 @@ package pro.civitaspo.digdag.plugin.emr_fleet.operator
 import java.util.Date
 
 import com.amazonaws.services.elasticmapreduce.model.{ClusterState, ClusterSummary, ListClustersRequest, ListClustersResult}
+import com.amazonaws.services.elasticmapreduce.model.ClusterState.{RUNNING, WAITING}
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
@@ -17,14 +18,14 @@ class EmrFleetDetectClustersOperator(
   templateEngine: TemplateEngine
 ) extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
 
-  val timezone: String = params.get("timezone", classOf[String])
-  val createdWithin: DurationParam = params.get("created_within", classOf[DurationParam])
-  val durationAfterCreated: DurationParam = params.get("duration_after_created", classOf[DurationParam], createdWithin)
-  val regexp: String = params.get("regexp", classOf[String], ".*")
-  val states: Seq[ClusterState] = {
-    val list = params.getListOrEmpty("states", classOf[String])
-    if (list.isEmpty) Seq(ClusterState.RUNNING, ClusterState.WAITING)
-    else list.asScala.map(ClusterState.fromValue)
+  protected val timezone: String = params.get("timezone", classOf[String])
+  protected val createdWithin: DurationParam = params.get("created_within", classOf[DurationParam])
+  protected val durationAfterCreated: DurationParam = params.get("duration_after_created", classOf[DurationParam], createdWithin)
+  protected val regexp: String = params.get("regexp", classOf[String], ".*")
+  protected val states: Seq[ClusterState] = {
+    val seq = params.getListOrEmpty("states", classOf[ClusterState]).asScala
+    if (seq.isEmpty) Seq(RUNNING, WAITING)
+    else seq
   }
 
   override def runTask(): TaskResult = {
@@ -48,7 +49,7 @@ class EmrFleetDetectClustersOperator(
     builder.build()
   }
 
-  private def clusterSummaryToStoreParams(cs: ClusterSummary): Config = {
+  protected def clusterSummaryToStoreParams(cs: ClusterSummary): Config = {
     val p = newEmptyParams
     p.set("id", cs.getId)
     p.set("name", cs.getName)
@@ -68,7 +69,7 @@ class EmrFleetDetectClustersOperator(
     p
   }
 
-  private def detectClusters(maker: Option[String] = None): Seq[ClusterSummary] = {
+  protected def detectClusters(maker: Option[String] = None): Seq[ClusterSummary] = {
     val req = new ListClustersRequest()
       .withClusterStates(states: _*)
       .withCreatedBefore(createdBefore)
@@ -88,13 +89,13 @@ class EmrFleetDetectClustersOperator(
     builder.result()
   }
 
-  private def createdBefore: Date = {
+  protected def createdBefore: Date = {
     val minusMillis: Long = createdWithin.getDuration.toMillis
     val plusMillis: Long = durationAfterCreated.getDuration.toMillis
     new Date(System.currentTimeMillis() - minusMillis + plusMillis)
   }
 
-  private def createdAfter: Date = {
+  protected def createdAfter: Date = {
     val minusMillis: Long = createdWithin.getDuration.toMillis
     new Date(System.currentTimeMillis() - minusMillis)
   }
