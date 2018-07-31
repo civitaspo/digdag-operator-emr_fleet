@@ -3,6 +3,7 @@ package pro.civitaspo.digdag.plugin.emr_fleet.operator
 import com.amazonaws.services.elasticmapreduce.model.{Application, BootstrapActionConfig, ClusterState, Configuration, EbsBlockDeviceConfig, EbsConfiguration, InstanceFleetConfig, InstanceFleetProvisioningSpecifications, InstanceFleetType, InstanceTypeConfig, JobFlowInstancesConfig, PlacementType, RunJobFlowRequest, ScriptBootstrapActionConfig, SpotProvisioningSpecification, SpotProvisioningTimeoutAction, Tag, VolumeSpecification}
 import com.amazonaws.services.elasticmapreduce.model.ClusterState.{RUNNING, TERMINATED, TERMINATED_WITH_ERRORS, TERMINATING, WAITING}
 import com.amazonaws.services.elasticmapreduce.model.InstanceFleetType.{CORE, MASTER, TASK}
+import com.amazonaws.services.elasticmapreduce.model.SpotProvisioningTimeoutAction.TERMINATE_CLUSTER
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
@@ -46,7 +47,7 @@ class EmrFleetCreateClusterOperator(
 
   protected lazy val instanceFleetProvisioningSpecifications: InstanceFleetProvisioningSpecifications = {
     val blockDuration: Optional[DurationParam] = spotSpec.getOptional("block_duration", classOf[DurationParam])
-    val timeoutAction: String = spotSpec.get("timeout_action", classOf[String], "TERMINATE_CLUSTER")
+    val timeoutAction: SpotProvisioningTimeoutAction = spotSpec.get("timeout_action", classOf[SpotProvisioningTimeoutAction], TERMINATE_CLUSTER)
     val timeoutDuration: DurationParam = spotSpec.get("timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
 
     val s = new SpotProvisioningSpecification()
@@ -58,7 +59,7 @@ class EmrFleetCreateClusterOperator(
       }
       s.setBlockDurationMinutes(blockDuration.get().getDuration.toMinutes.toInt)
     }
-    s.setTimeoutAction(SpotProvisioningTimeoutAction.fromValue(timeoutAction))
+    s.setTimeoutAction(timeoutAction)
     s.setTimeoutDurationMinutes(timeoutDuration.getDuration.toMinutes.toInt)
 
     new InstanceFleetProvisioningSpecifications().withSpotSpecification(s)
