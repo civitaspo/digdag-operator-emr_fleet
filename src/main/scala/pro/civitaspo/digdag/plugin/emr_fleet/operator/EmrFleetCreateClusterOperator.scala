@@ -175,15 +175,14 @@ class EmrFleetCreateClusterOperator(context: OperatorContext, systemConfig: Conf
 
   protected def configureBootstrapAction(bootstrapAction: Config): BootstrapActionConfig = {
     val name: String = bootstrapAction.get("name", classOf[String])
-    val script: Config = bootstrapAction.getNested("script")
-    val path: String = script.get("path", classOf[String])
-    val args: Seq[String] = script.getListOrEmpty("args", classOf[String]).asScala
+    val script: String = bootstrapAction.get("script", classOf[String])
+    val args: Seq[String] = bootstrapAction.getListOrEmpty("args", classOf[String]).asScala
 
     new BootstrapActionConfig()
       .withName(name)
       .withScriptBootstrapAction(
         new ScriptBootstrapActionConfig()
-          .withPath(path)
+          .withPath(script)
           .withArgs(args: _*)
       )
   }
