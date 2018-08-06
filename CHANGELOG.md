@@ -1,3 +1,8 @@
+0.0.3 (2018-08-06)
+==================
+
+* [Enhancement] Enable to merge emr_fleet.${task_name} exports.
+
 0.0.2 (2018-08-06)
 ==================
 
