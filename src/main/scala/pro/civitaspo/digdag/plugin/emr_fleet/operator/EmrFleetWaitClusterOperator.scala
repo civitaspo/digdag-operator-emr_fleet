@@ -13,11 +13,15 @@ import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskExecutionException, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
+import pro.civitaspo.digdag.plugin.emr_fleet.wrapper.{ParamInGiveup, ParamInRetry, RetryExecutorWrapper}
 
 import scala.collection.JavaConverters._
 
 class EmrFleetWaitClusterOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
+
+  class EmrFleetWaitClusterOperatorException(message: String) extends TaskExecutionException(message)
+  class EmrFleetWaitClusterOperatorRetryableStateException(message: String) extends EmrFleetWaitClusterOperatorException(message)
 
   protected val clusterId: String = params.get("_command", classOf[String])
   protected val successStates: Seq[ClusterState] = params.getList("success_states", classOf[ClusterState]).asScala
@@ -40,30 +44,40 @@ class EmrFleetWaitClusterOperator(context: OperatorContext, systemConfig: Config
     builder.build()
   }
 
-  private def pollingCluster(): Unit = {
-    val timeoutSeconds: Int = timeoutDuration.getDuration.getSeconds.toInt
-    val pollingIntervalSeconds: Int = pollingInterval.getDuration.getSeconds.toInt
-    val counter: Iterator[Int] = Stream.from(0).iterator
-    while (!pollCluster) {
-      val timeSpentSeconds: Int = counter.next * pollingIntervalSeconds
-      if (timeSpentSeconds >= timeoutSeconds) {
-        throw new TaskExecutionException(s"""[$operatorName] timeout because of spent: ${timeSpentSeconds}s >= ${timeoutSeconds}s""")
+  protected def pollingCluster(): Unit = {
+    RetryExecutorWrapper()
+      .withInitialRetryWait(pollingInterval.getDuration)
+      .withMaxRetryWait(pollingInterval.getDuration)
+      .withRetryLimit(Int.MaxValue)
+      .withTimeout(timeoutDuration.getDuration)
+      .withWaitGrowRate(1.0)
+      .onGiveup { p: ParamInGiveup =>
+        logger.error(s"[${operatorName}] failed to wait cluster: ${p.firstException.getMessage}", p.firstException)
       }
-      Thread.sleep(pollingIntervalSeconds * 1000) // millis
-    }
-  }
+      .onRetry { p: ParamInRetry =>
+        logger.info(s"[${operatorName}] polling ${p.e.getMessage} (next: ${p.retryCount}, total wait: ${p.totalWaitMillis} ms)")
+      }
+      .retryIf {
+        case ex: EmrFleetWaitClusterOperatorRetryableStateException => true
+        case _ => false
+      }
+      .runInterruptible {
+        val result: DescribeClusterResult = describeCluster
+        val cluster: Cluster = result.getCluster
+        val state: ClusterState = ClusterState.fromValue(cluster.getStatus.getState)
 
-  protected def pollCluster: Boolean = {
-    val result: DescribeClusterResult = describeCluster
-    val cluster: Cluster = result.getCluster
-    val state: ClusterState = ClusterState.fromValue(cluster.getStatus.getState)
-
-    logger.info(s"""[$operatorName] Id: ${cluster.getId}, Name: ${cluster.getName} (current state: ${state.toString})""")
-
-    if (errorStates.exists(_.equals(state))) {
-      throw new TaskExecutionException(s"""[$operatorName] The cluster state is one of the error states: ${state.toString}""")
-    }
-    successStates.exists(_.equals(state))
+        if (errorStates.exists(_.equals(state))) {
+          throw new EmrFleetWaitClusterOperatorException(
+            s"""[$operatorName] cluster: ${cluster.getName} (id: ${cluster.getId}) is one of the error states: ${state.toString}"""
+          )
+        }
+        if (!successStates.exists(_.equals(state))) {
+          // This exception is caught and the message is used for retrying, so $operatorName is not needed as prefix.
+          throw new EmrFleetWaitClusterOperatorRetryableStateException(
+            s"""cluster: ${cluster.getName} (id: ${cluster.getId}) is not one of the success states: ${state.toString}"""
+          )
+        }
+      }
   }
 
   protected def describeCluster: DescribeClusterResult = {
