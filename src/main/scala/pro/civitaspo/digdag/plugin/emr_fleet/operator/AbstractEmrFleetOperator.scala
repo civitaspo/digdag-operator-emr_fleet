@@ -26,10 +26,18 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.Try
 
-abstract class AbstractEmrFleetOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine) extends BaseOperator(context) {
+abstract class AbstractEmrFleetOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
+    extends BaseOperator(context) {
 
   protected val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  protected val params: Config = request.getConfig.mergeDefault(request.getConfig.getNestedOrGetEmpty("emr_fleet"))
+  protected val params: Config = {
+    val elems: Seq[String] = operatorName.split("\\.")
+    elems.indices.foldLeft(request.getConfig) { (p: Config, idx: Int) =>
+      p.mergeDefault((0 to idx).foldLeft(request.getConfig) { (nestedParam: Config, keyIdx: Int) =>
+        nestedParam.getNestedOrGetEmpty(elems(keyIdx))
+      })
+    }
+  }
   protected val secrets: SecretProvider = context.getSecrets.getSecrets("emr_fleet")
 
   protected val isAllowedAuthMethodEnv: Boolean = systemConfig.get("emr_fleet.allow_auth_method_env", classOf[Boolean], false)
@@ -45,8 +53,6 @@ abstract class AbstractEmrFleetOperator(context: OperatorContext, systemConfig: 
   protected val roleArn: Optional[String] = secrets.getSecretOptional("role_arn")
   protected val roleSessionName: String = secrets.getSecretOptional("role_session_name").or(s"digdag-emr_fleet-${params.get("session_uuid", classOf[String])}")
   protected val httpProxy: SecretProvider = secrets.getSecrets("http_proxy")
-
-  protected val operatorName: String = params.get("_type", classOf[String])
 
   protected val authMethod: String = params.get("auth_method", classOf[String], "basic")
   protected val profileName: String = params.get("profile_name", classOf[String], "default")

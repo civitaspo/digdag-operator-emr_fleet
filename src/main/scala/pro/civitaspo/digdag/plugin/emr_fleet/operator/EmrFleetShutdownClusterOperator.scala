@@ -4,8 +4,8 @@ import com.amazonaws.services.elasticmapreduce.model.TerminateJobFlowsRequest
 import io.digdag.client.config.Config
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 
-class EmrFleetShutdownClusterOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
-    extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
+class EmrFleetShutdownClusterOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
+    extends AbstractEmrFleetOperator(operatorName, context, systemConfig, templateEngine) {
 
   protected val clusterId: String = params.get("_command", classOf[String])
 

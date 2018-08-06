@@ -34,8 +34,8 @@ object EmrFleetPlugin {
       new OperatorFactory {
         override def getType: String = operatorName
         override def newOperator(context: OperatorContext): Operator = {
-          val constructor: Constructor[T] = klass.getConstructor(classOf[OperatorContext], classOf[Config], classOf[TemplateEngine])
-          constructor.newInstance(context, systemConfig, templateEngine)
+          val constructor: Constructor[T] = klass.getConstructor(classOf[String], classOf[OperatorContext], classOf[Config], classOf[TemplateEngine])
+          constructor.newInstance(operatorName, context, systemConfig, templateEngine)
         }
       }
     }

@@ -17,8 +17,8 @@ import pro.civitaspo.digdag.plugin.emr_fleet.wrapper.{ParamInGiveup, ParamInRetr
 
 import scala.collection.JavaConverters._
 
-class EmrFleetWaitClusterOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
-    extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
+class EmrFleetWaitClusterOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
+    extends AbstractEmrFleetOperator(operatorName, context, systemConfig, templateEngine) {
 
   class EmrFleetWaitClusterOperatorException(message: String) extends TaskExecutionException(message)
   class EmrFleetWaitClusterOperatorRetryableStateException(message: String) extends EmrFleetWaitClusterOperatorException(message)
