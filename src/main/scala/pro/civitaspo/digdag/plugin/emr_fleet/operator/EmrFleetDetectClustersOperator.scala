@@ -11,8 +11,8 @@ import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
 
-class EmrFleetDetectClustersOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
-    extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
+class EmrFleetDetectClustersOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
+    extends AbstractEmrFleetOperator(operatorName, context, systemConfig, templateEngine) {
 
   protected val timezone: String = params.get("timezone", classOf[String])
   protected val createdWithin: DurationParam = params.get("created_within", classOf[DurationParam])

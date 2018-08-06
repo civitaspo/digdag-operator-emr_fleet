@@ -4,23 +4,25 @@ _export:
       - file://${repos}
       # - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-emr_fleet:0.0.1
+      - pro.civitaspo:digdag-operator-emr_fleet:0.0.3
   emr_fleet:
     auth_method: profile
+    create_cluster:
+      tags:
+        environment: test
+      spot_spec:
+        block_duration: 1h
+
 
 +step1:
   emr_fleet.create_cluster>:
-  tags:
-    environment: test
-  spot_spec:
-    block_duration: 1h
   master_fleet:
     bid_percentage: 60
     candidates:
       - instance_type: r3.xlarge
       - instance_type: m3.xlarge
   core_fleet:
-    target_capacity: 192
+    target_capacity: 32
     bid_percentage: 60
     candidates:
       - instance_type: r3.8xlarge

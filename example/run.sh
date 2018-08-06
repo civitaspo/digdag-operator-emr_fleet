@@ -8,7 +8,7 @@ LOCAL_MAVEN_REPO=$ROOT/build/repo
   cd $EXAMPLE_ROOT
 
   ## to remove cache
-  rm -rf .digdag
+  rm -rfv .digdag
 
   ## run
   digdag run example.dig -c allow.properties -p repos=${LOCAL_MAVEN_REPO} --no-save

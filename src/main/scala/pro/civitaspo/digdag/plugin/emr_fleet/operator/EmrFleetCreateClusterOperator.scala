@@ -31,8 +31,8 @@ import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
 
-class EmrFleetCreateClusterOperator(context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
-    extends AbstractEmrFleetOperator(context, systemConfig, templateEngine) {
+class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
+    extends AbstractEmrFleetOperator(operatorName, context, systemConfig, templateEngine) {
 
   protected val clusterName: String = params.get("name", classOf[String], s"digdag-${params.get("session_uuid", classOf[String])}")
   protected val tags: Map[String, String] = params.getMapOrEmpty("tags", classOf[String], classOf[String]).asScala.toMap
