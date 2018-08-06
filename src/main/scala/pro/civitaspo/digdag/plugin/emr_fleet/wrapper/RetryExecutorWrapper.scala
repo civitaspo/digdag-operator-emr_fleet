@@ -66,7 +66,7 @@ class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
 
   def runInterruptible[T](f: => T): T = {
     if (!param.hasOnRetry) return onRetry { _ =>
-    }.runInterruptible(f)
+      }.runInterruptible(f)
     val c = new Callable[T] {
       override def call(): T = f
     }
@@ -75,7 +75,7 @@ class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
 
   def run[T](f: => T): T = {
     if (!param.hasOnRetry) return onRetry { _ =>
-    }.run(f)
+      }.run(f)
     val c = new Callable[T] {
       override def call(): T = f
     }

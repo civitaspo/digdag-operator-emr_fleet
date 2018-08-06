@@ -1,6 +1,14 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
-import com.amazonaws.services.elasticmapreduce.model.{Cluster, ClusterState, DescribeClusterRequest, DescribeClusterResult, Instance, InstanceFleetType, ListInstancesRequest}
+import com.amazonaws.services.elasticmapreduce.model.{
+  Cluster,
+  ClusterState,
+  DescribeClusterRequest,
+  DescribeClusterResult,
+  Instance,
+  InstanceFleetType,
+  ListInstancesRequest
+}
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskExecutionException, TaskResult, TemplateEngine}
@@ -47,9 +55,7 @@ class EmrFleetWaitClusterOperator(context: OperatorContext, systemConfig: Config
         logger.error(s"[${operatorName}] failed to wait cluster: ${p.firstException.getMessage}", p.firstException)
       }
       .onRetry { p: ParamInRetry =>
-        logger.info(
-          s"[${operatorName}] polling ${p.e.getMessage} (next: ${p.retryCount}, total wait: ${p.totalWaitMillis} ms)"
-        )
+        logger.info(s"[${operatorName}] polling ${p.e.getMessage} (next: ${p.retryCount}, total wait: ${p.totalWaitMillis} ms)")
       }
       .retryIf {
         case ex: EmrFleetWaitClusterOperatorRetryableStateException => true
@@ -61,11 +67,15 @@ class EmrFleetWaitClusterOperator(context: OperatorContext, systemConfig: Config
         val state: ClusterState = ClusterState.fromValue(cluster.getStatus.getState)
 
         if (errorStates.exists(_.equals(state))) {
-          throw new EmrFleetWaitClusterOperatorException(s"""[$operatorName] cluster: ${cluster.getName} (id: ${cluster.getId}) is one of the error states: ${state.toString}""")
+          throw new EmrFleetWaitClusterOperatorException(
+            s"""[$operatorName] cluster: ${cluster.getName} (id: ${cluster.getId}) is one of the error states: ${state.toString}"""
+          )
         }
         if (!successStates.exists(_.equals(state))) {
           // This exception is caught and the message is used for retrying, so $operatorName is not needed as prefix.
-          throw new EmrFleetWaitClusterOperatorRetryableStateException(s"""cluster: ${cluster.getName} (id: ${cluster.getId}) is not one of the success states: ${state.toString}""")
+          throw new EmrFleetWaitClusterOperatorRetryableStateException(
+            s"""cluster: ${cluster.getName} (id: ${cluster.getId}) is not one of the success states: ${state.toString}"""
+          )
         }
       }
   }
