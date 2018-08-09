@@ -10,6 +10,9 @@ case class ParamInWrapper(timeoutDurationMillis: Int, totalWaitMillisCounter: It
 case class ParamInRetry(e: Exception, retryCount: Int, retryLimit: Int, retryWaitMillis: Int, totalWaitMillis: Long)
 case class ParamInGiveup(firstException: Exception, lastException: Exception)
 
+class RetryableException(message: String = "", cause: Throwable = null) extends RuntimeException(message, cause)
+class NotRetryableException(message: String = "", cause: Throwable = null) extends RuntimeException(message, cause)
+
 class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
 
   def withRetryLimit(count: Int): RetryExecutorWrapper = {
@@ -40,7 +43,7 @@ class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
     RetryExecutorWrapper(exe.retryIf(r), param)
   }
 
-  def onRetry(f: ParamInRetry => Unit): RetryExecutorWrapper = {
+  def onRetry(f: ParamInRetry => Unit = _ => ()): RetryExecutorWrapper = {
     val r = new RetryAction {
       override def onRetry(exception: Exception, retryCount: Int, retryLimit: Int, retryWait: Int): Unit = {
         val totalWaitMillis: Int = param.totalWaitMillisCounter.next()
@@ -65,21 +68,37 @@ class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
   }
 
   def runInterruptible[T](f: => T): T = {
-    if (!param.hasOnRetry) return onRetry { _ =>
-      }.runInterruptible(f)
+    executeWithWrappedRetryExecutorWrapper { w =>
+      w._runInterruptible(f)
+    }
+  }
+
+  def run[T](f: => T): T = {
+    executeWithWrappedRetryExecutorWrapper { w =>
+      w._run(f)
+    }
+  }
+
+  private def _runInterruptible[T](f: => T): T = {
     val c = new Callable[T] {
       override def call(): T = f
     }
     exe.runInterruptible(c)
   }
 
-  def run[T](f: => T): T = {
-    if (!param.hasOnRetry) return onRetry { _ =>
-      }.run(f)
+  private def _run[T](f: => T): T = {
     val c = new Callable[T] {
       override def call(): T = f
     }
     exe.run(c)
+  }
+
+  private def executeWithWrappedRetryExecutorWrapper[T](f: RetryExecutorWrapper => T): T = {
+    val wrapped = if (!param.hasOnRetry) onRetry() else this
+    try f(wrapped)
+    catch {
+      case ex: RetryGiveupException => throw new NotRetryableException(cause = ex)
+    }
   }
 }
 

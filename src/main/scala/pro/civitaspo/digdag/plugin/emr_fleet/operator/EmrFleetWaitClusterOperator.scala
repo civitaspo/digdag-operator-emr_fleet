@@ -11,17 +11,14 @@ import com.amazonaws.services.elasticmapreduce.model.{
 }
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
-import io.digdag.spi.{OperatorContext, TaskExecutionException, TaskResult, TemplateEngine}
+import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
-import pro.civitaspo.digdag.plugin.emr_fleet.wrapper.{ParamInGiveup, ParamInRetry, RetryExecutorWrapper}
+import pro.civitaspo.digdag.plugin.emr_fleet.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
 
 import scala.collection.JavaConverters._
 
 class EmrFleetWaitClusterOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends AbstractEmrFleetOperator(operatorName, context, systemConfig, templateEngine) {
-
-  class EmrFleetWaitClusterOperatorException(message: String) extends TaskExecutionException(message)
-  class EmrFleetWaitClusterOperatorRetryableStateException(message: String) extends EmrFleetWaitClusterOperatorException(message)
 
   protected val clusterId: String = params.get("_command", classOf[String])
   protected val successStates: Seq[ClusterState] = params.getList("success_states", classOf[ClusterState]).asScala
@@ -58,7 +55,7 @@ class EmrFleetWaitClusterOperator(operatorName: String, context: OperatorContext
         logger.info(s"[${operatorName}] polling ${p.e.getMessage} (next: ${p.retryCount}, total wait: ${p.totalWaitMillis} ms)")
       }
       .retryIf {
-        case ex: EmrFleetWaitClusterOperatorRetryableStateException => true
+        case _: RetryableException => true
         case _ => false
       }
       .runInterruptible {
@@ -67,15 +64,13 @@ class EmrFleetWaitClusterOperator(operatorName: String, context: OperatorContext
         val state: ClusterState = ClusterState.fromValue(cluster.getStatus.getState)
 
         if (errorStates.exists(_.equals(state))) {
-          throw new EmrFleetWaitClusterOperatorException(
-            s"""[$operatorName] cluster: ${cluster.getName} (id: ${cluster.getId}) is one of the error states: ${state.toString}"""
+          throw new NotRetryableException(
+            message = s"""[$operatorName] cluster: ${cluster.getName} (id: ${cluster.getId}) is one of the error states: ${state.toString}"""
           )
         }
         if (!successStates.exists(_.equals(state))) {
           // This exception is caught and the message is used for retrying, so $operatorName is not needed as prefix.
-          throw new EmrFleetWaitClusterOperatorRetryableStateException(
-            s"""cluster: ${cluster.getName} (id: ${cluster.getId}) is not one of the success states: ${state.toString}"""
-          )
+          throw new RetryableException(message = s"""cluster: ${cluster.getName} (id: ${cluster.getId}) is not one of the success states: ${state.toString}""")
         }
       }
   }
