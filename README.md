@@ -16,7 +16,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-emr_fleet:0.0.1
+      - pro.civitaspo:digdag-operator-emr_fleet:0.0.4
   emr_fleet:
     auth_method: profile
 
