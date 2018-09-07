@@ -29,10 +29,10 @@ dependencies {
     compile group: 'org.scala-lang', name: 'scala-library', version: scalaSemanticVersion
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-emr
     compile group: 'com.amazonaws', name: 'aws-java-sdk-emr', version: awsSdkVersion
-    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-sts
-    compile group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: awsSdkVersion
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3
     compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: awsSdkVersion
+    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-sts
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: awsSdkVersion
 }
 
 shadowJar {
