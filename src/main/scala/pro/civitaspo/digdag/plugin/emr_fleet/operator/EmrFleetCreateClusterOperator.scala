@@ -173,18 +173,20 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     c
   }
 
-  protected def configureBootstrapAction(bootstrapAction: Config): BootstrapActionConfig = {
+  protected def configureBootstrapAction(bootstrapAction: Config): Seq[BootstrapActionConfig] = {
     val name: String = bootstrapAction.get("name", classOf[String])
     val script: String = bootstrapAction.get("script", classOf[String])
     val args: Seq[String] = bootstrapAction.getListOrEmpty("args", classOf[String]).asScala
 
-    new BootstrapActionConfig()
-      .withName(name)
-      .withScriptBootstrapAction(
-        new ScriptBootstrapActionConfig()
-          .withPath(script)
-          .withArgs(args: _*)
-      )
+    Seq(
+      new BootstrapActionConfig()
+        .withName(name)
+        .withScriptBootstrapAction(
+          new ScriptBootstrapActionConfig()
+            .withPath(script)
+            .withArgs(args: _*)
+        )
+    )
   }
 
   protected def instancesConfiguration: JobFlowInstancesConfig = {
@@ -222,7 +224,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     new RunJobFlowRequest()
       .withAdditionalInfo(additionalInfo.orNull)
       .withApplications(applications.map(a => new Application().withName(a)): _*)
-      .withBootstrapActions(bootstrapActions.map(configureBootstrapAction): _*)
+      .withBootstrapActions(bootstrapActions.flatMap(configureBootstrapAction): _*)
       .withConfigurations(applicationConfigurations.map(configureApplicationConfiguration): _*)
       .withCustomAmiId(customAmiId.orNull)
       .withJobFlowRole(instanceProfile)
