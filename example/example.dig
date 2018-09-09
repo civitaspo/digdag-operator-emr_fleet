@@ -16,6 +16,7 @@ _export:
 
 +step1:
   emr_fleet.create_cluster>:
+  log_uri: s3://${WRITABLE_BUCKET}/emr/
   master_fleet:
     bid_percentage: 60
     candidates:
@@ -39,6 +40,15 @@ _export:
     - classification: capacity-scheduler
       properties:
         yarn.scheduler.capacity.resource-calculator: org.apache.hadoop.yarn.util.resource.DominantResourceCalculator
+  bootstrap_actions:
+    - name: echo
+      script: s3://${WRITABLE_BUCKET}/echo.sh
+      content: |
+        #!/usr/bin/env bash
+        echo ${emr_fleet}
+    - name: echo 2
+      script: s3://${WRITABLE_BUCKET}/echo.sh
+      run_if: instance.isMaster=true
 
 +step2:
   echo>: ${emr_fleet.last_cluster}
