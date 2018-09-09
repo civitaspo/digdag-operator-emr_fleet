@@ -1,5 +1,8 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
+import java.net.URI
+import java.nio.charset.StandardCharsets.UTF_8
+
 import com.amazonaws.services.elasticmapreduce.model.{
   Application,
   BootstrapActionConfig,
@@ -23,16 +26,25 @@ import com.amazonaws.services.elasticmapreduce.model.{
 import com.amazonaws.services.elasticmapreduce.model.ClusterState.{RUNNING, TERMINATED, TERMINATED_WITH_ERRORS, TERMINATING, WAITING}
 import com.amazonaws.services.elasticmapreduce.model.InstanceFleetType.{CORE, MASTER, TASK}
 import com.amazonaws.services.elasticmapreduce.model.SpotProvisioningTimeoutAction.TERMINATE_CLUSTER
+import com.amazonaws.services.s3.AmazonS3URI
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
-import io.digdag.client.config.{Config, ConfigKey}
+import io.digdag.client.config.{Config, ConfigException, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
+import scala.util.{Random, Try}
 
 class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends AbstractEmrFleetOperator(operatorName, context, systemConfig, templateEngine) {
+
+  object AmazonS3URI {
+    def apply(path: String): AmazonS3URI = new AmazonS3URI(path, false)
+  }
+
+  // ref. https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-plan-bootstrap.html#emr-bootstrap-runif
+  protected val RUN_IF_SCRIPT_LOCATION: String = "s3://elasticmapreduce/bootstrap-actions/run-if"
 
   protected val clusterName: String = params.get("name", classOf[String], s"digdag-${params.get("session_uuid", classOf[String])}")
   protected val tags: Map[String, String] = params.getMapOrEmpty("tags", classOf[String], classOf[String]).asScala.toMap
@@ -177,16 +189,58 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     val name: String = bootstrapAction.get("name", classOf[String])
     val script: String = bootstrapAction.get("script", classOf[String])
     val args: Seq[String] = bootstrapAction.getListOrEmpty("args", classOf[String]).asScala
+    val contentOrFile: Optional[String] = bootstrapAction.getOptional("content", classOf[String])
+    val runIf: Optional[String] = bootstrapAction.getOptional("run_if", classOf[String])
 
-    Seq(
-      new BootstrapActionConfig()
-        .withName(name)
-        .withScriptBootstrapAction(
-          new ScriptBootstrapActionConfig()
-            .withPath(script)
-            .withArgs(args: _*)
-        )
-    )
+    if (contentOrFile.isPresent) uploadBootstrapActionScript(contentOrFile.get(), script)
+
+    val builder = Seq.newBuilder[BootstrapActionConfig]
+    if (runIf.isPresent) builder ++= buildRunIfBootstrapAction(runIf.get(), name, script, args)
+    else builder += new BootstrapActionConfig(name, new ScriptBootstrapActionConfig(script, seqAsJavaList(args)))
+
+    builder.result()
+  }
+
+  protected def uploadBootstrapActionScript(contentOrFile: String, script: String): Unit = {
+    if (!script.startsWith("s3://")) throw new ConfigException(s"[$operatorName] `script` must start with 's3://' if uploading content as bootstrap action.")
+    val s3Uri = AmazonS3URI(script)
+    val content = Try(workspace.templateFile(templateEngine, workspace.getFile(contentOrFile).getPath, UTF_8, params)).getOrElse(contentOrFile)
+    withS3(_.putObject(s3Uri.getBucket, s3Uri.getKey, content))
+  }
+
+  protected def buildRunIfBootstrapAction(condition: String, name: String, script: String, args: Seq[String]): Seq[BootstrapActionConfig] = {
+    val builder = Seq.newBuilder[BootstrapActionConfig]
+    new URI(script) match {
+      case uri if uri.getScheme.contentEquals("file") =>
+        builder += new BootstrapActionConfig()
+          .withName(s"$name if $condition")
+          .withScriptBootstrapAction(
+            new ScriptBootstrapActionConfig()
+              .withPath(RUN_IF_SCRIPT_LOCATION)
+              .withArgs(Seq(condition, uri.getPath) ++ args: _*)
+          )
+      case uri if uri.getScheme.contentEquals("s3") =>
+        // NOTE: `run-if` script provided by EMR has a bug: https://github.com/aws-samples/emr-bootstrap-actions/pull/211
+        //       so, download script first, then execute it.
+        val localFileName: String = s"digdag-${params.get("session_uuid", classOf[String])}-${Random.alphanumeric.take(10).mkString}"
+        builder += new BootstrapActionConfig()
+          .withName(s"$name if $condition: Download $script as $localFileName")
+          .withScriptBootstrapAction(
+            new ScriptBootstrapActionConfig()
+              .withPath(RUN_IF_SCRIPT_LOCATION)
+              .withArgs(Seq(condition, "aws", "s3", "cp", script, s"./$localFileName"): _*)
+          )
+        builder += new BootstrapActionConfig()
+          .withName(s"$name if $condition: Execute $localFileName ($script)")
+          .withScriptBootstrapAction(
+            new ScriptBootstrapActionConfig()
+              .withPath(RUN_IF_SCRIPT_LOCATION)
+              .withArgs(Seq(condition, s"./$localFileName") ++ args: _*)
+          )
+      case _ =>
+        throw new ConfigException(s"[$operatorName] Invalid bootstrap action path, must be a location in Amazon S3 or a local path starting with 'file:'.")
+    }
+    builder.result()
   }
 
   protected def instancesConfiguration: JobFlowInstancesConfig = {
