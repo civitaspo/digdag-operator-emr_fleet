@@ -243,7 +243,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     builder.result()
   }
 
-  protected def instancesConfiguration: JobFlowInstancesConfig = {
+  protected def configureInstances: JobFlowInstancesConfig = {
     val c = new JobFlowInstancesConfig()
 
     if (masterSecurityGroups.nonEmpty) {
@@ -289,7 +289,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
       .withServiceRole(serviceRole)
       .withTags(tags.toSeq.map(m => new Tag().withKey(m._1).withValue(m._2)): _*)
       .withVisibleToAllUsers(isVisible)
-      .withInstances(instancesConfiguration)
+      .withInstances(configureInstances)
   }
 
   override def runTask(): TaskResult = {
