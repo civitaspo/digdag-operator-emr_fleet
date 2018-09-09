@@ -97,7 +97,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     new InstanceFleetProvisioningSpecifications().withSpotSpecification(s)
   }
 
-  protected def masterFleetConfiguration: InstanceFleetConfig = {
+  protected def configureMasterFleet: InstanceFleetConfig = {
     val name: String = masterFleet.get("name", classOf[String], "master instance fleet")
     val useSpotInstance: Boolean = masterFleet.get("use_spot_instance", classOf[Boolean], true)
     val defaultBidPercentage: Double = masterFleet.get("bid_percentage", classOf[Double], 100.0)
@@ -263,7 +263,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     if (subnetIds.nonEmpty) c.setEc2SubnetIds(seqAsJavaList(subnetIds))
 
     val instanceTypeConfigsBuilder = Seq.newBuilder[InstanceFleetConfig]
-    instanceTypeConfigsBuilder += masterFleetConfiguration
+    instanceTypeConfigsBuilder += configureMasterFleet
     instanceTypeConfigsBuilder += configureSlaveFleet(CORE, coreFleet)
     if (!taskFleet.isEmpty) instanceTypeConfigsBuilder += configureSlaveFleet(TASK, taskFleet)
     c.setInstanceFleets(seqAsJavaList(instanceTypeConfigsBuilder.result()))
