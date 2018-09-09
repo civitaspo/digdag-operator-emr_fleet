@@ -73,7 +73,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
   protected val waitAvailableState: Boolean = params.get("wait_available_state", classOf[Boolean], true)
   protected val waitTimeoutDuration: DurationParam = params.get("wait_timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
 
-  protected lazy val instanceFleetProvisioningSpecifications: InstanceFleetProvisioningSpecifications = {
+  protected lazy val configureInstanceFleetProvisioningSpecifications: InstanceFleetProvisioningSpecifications = {
     val blockDuration: Optional[DurationParam] = spotSpec.getOptional("block_duration", classOf[DurationParam])
     val timeoutAction: SpotProvisioningTimeoutAction = spotSpec.get("timeout_action", classOf[SpotProvisioningTimeoutAction], TERMINATE_CLUSTER)
     val timeoutDuration: DurationParam = spotSpec.get("timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
@@ -106,7 +106,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     val c = new InstanceFleetConfig()
     c.setInstanceFleetType(MASTER)
     c.setName(name)
-    c.setLaunchSpecifications(instanceFleetProvisioningSpecifications)
+    c.setLaunchSpecifications(configureInstanceFleetProvisioningSpecifications)
     if (useSpotInstance) {
       c.setTargetSpotCapacity(1)
       c.setTargetOnDemandCapacity(0)
@@ -128,7 +128,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     new InstanceFleetConfig()
       .withInstanceFleetType(fleetType)
       .withName(name)
-      .withLaunchSpecifications(instanceFleetProvisioningSpecifications)
+      .withLaunchSpecifications(configureInstanceFleetProvisioningSpecifications)
       .withTargetSpotCapacity(targetCapacity)
       .withInstanceTypeConfigs(seqAsJavaList(candidates.map(configureCandidate(_, defaultBidPercentage))))
   }
