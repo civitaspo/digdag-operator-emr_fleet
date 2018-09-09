@@ -1,5 +1,8 @@
 package pro.civitaspo.digdag.plugin.emr_fleet.operator
 
+import java.net.URI
+import java.nio.charset.StandardCharsets.UTF_8
+
 import com.amazonaws.services.elasticmapreduce.model.{
   Application,
   BootstrapActionConfig,
@@ -23,16 +26,26 @@ import com.amazonaws.services.elasticmapreduce.model.{
 import com.amazonaws.services.elasticmapreduce.model.ClusterState.{RUNNING, TERMINATED, TERMINATED_WITH_ERRORS, TERMINATING, WAITING}
 import com.amazonaws.services.elasticmapreduce.model.InstanceFleetType.{CORE, MASTER, TASK}
 import com.amazonaws.services.elasticmapreduce.model.SpotProvisioningTimeoutAction.TERMINATE_CLUSTER
+import com.amazonaws.services.s3.AmazonS3URI
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
-import io.digdag.client.config.{Config, ConfigKey}
+import io.digdag.client.config.{Config, ConfigException, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
+import scala.util.{Random, Try}
+import scala.util.hashing.MurmurHash3
 
 class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends AbstractEmrFleetOperator(operatorName, context, systemConfig, templateEngine) {
+
+  object AmazonS3URI {
+    def apply(path: String): AmazonS3URI = new AmazonS3URI(path, false)
+  }
+
+  // ref. https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-plan-bootstrap.html#emr-bootstrap-runif
+  protected val RUN_IF_SCRIPT_LOCATION: String = "s3://elasticmapreduce/bootstrap-actions/run-if"
 
   protected val clusterName: String = params.get("name", classOf[String], s"digdag-${params.get("session_uuid", classOf[String])}")
   protected val tags: Map[String, String] = params.getMapOrEmpty("tags", classOf[String], classOf[String]).asScala.toMap
@@ -61,7 +74,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
   protected val waitAvailableState: Boolean = params.get("wait_available_state", classOf[Boolean], true)
   protected val waitTimeoutDuration: DurationParam = params.get("wait_timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
 
-  protected lazy val instanceFleetProvisioningSpecifications: InstanceFleetProvisioningSpecifications = {
+  protected lazy val configureInstanceFleetProvisioningSpecifications: InstanceFleetProvisioningSpecifications = {
     val blockDuration: Optional[DurationParam] = spotSpec.getOptional("block_duration", classOf[DurationParam])
     val timeoutAction: SpotProvisioningTimeoutAction = spotSpec.get("timeout_action", classOf[SpotProvisioningTimeoutAction], TERMINATE_CLUSTER)
     val timeoutDuration: DurationParam = spotSpec.get("timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
@@ -85,7 +98,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     new InstanceFleetProvisioningSpecifications().withSpotSpecification(s)
   }
 
-  protected def masterFleetConfiguration: InstanceFleetConfig = {
+  protected def configureMasterFleet: InstanceFleetConfig = {
     val name: String = masterFleet.get("name", classOf[String], "master instance fleet")
     val useSpotInstance: Boolean = masterFleet.get("use_spot_instance", classOf[Boolean], true)
     val defaultBidPercentage: Double = masterFleet.get("bid_percentage", classOf[Double], 100.0)
@@ -94,7 +107,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     val c = new InstanceFleetConfig()
     c.setInstanceFleetType(MASTER)
     c.setName(name)
-    c.setLaunchSpecifications(instanceFleetProvisioningSpecifications)
+    c.setLaunchSpecifications(configureInstanceFleetProvisioningSpecifications)
     if (useSpotInstance) {
       c.setTargetSpotCapacity(1)
       c.setTargetOnDemandCapacity(0)
@@ -116,7 +129,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     new InstanceFleetConfig()
       .withInstanceFleetType(fleetType)
       .withName(name)
-      .withLaunchSpecifications(instanceFleetProvisioningSpecifications)
+      .withLaunchSpecifications(configureInstanceFleetProvisioningSpecifications)
       .withTargetSpotCapacity(targetCapacity)
       .withInstanceTypeConfigs(seqAsJavaList(candidates.map(configureCandidate(_, defaultBidPercentage))))
   }
@@ -173,21 +186,73 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     c
   }
 
-  protected def configureBootstrapAction(bootstrapAction: Config): BootstrapActionConfig = {
+  protected def configureBootstrapAction(bootstrapAction: Config): Seq[BootstrapActionConfig] = {
     val name: String = bootstrapAction.get("name", classOf[String])
     val script: String = bootstrapAction.get("script", classOf[String])
     val args: Seq[String] = bootstrapAction.getListOrEmpty("args", classOf[String]).asScala
+    val contentOrFile: Optional[String] = bootstrapAction.getOptional("content", classOf[String])
+    val runIf: Optional[String] = bootstrapAction.getOptional("run_if", classOf[String])
 
-    new BootstrapActionConfig()
-      .withName(name)
-      .withScriptBootstrapAction(
-        new ScriptBootstrapActionConfig()
-          .withPath(script)
-          .withArgs(args: _*)
-      )
+    if (contentOrFile.isPresent) uploadBootstrapActionScript(contentOrFile.get(), script)
+
+    val builder = Seq.newBuilder[BootstrapActionConfig]
+    if (runIf.isPresent) builder ++= buildRunIfBootstrapAction(runIf.get(), name, script, args)
+    else builder += new BootstrapActionConfig(name, new ScriptBootstrapActionConfig(script, seqAsJavaList(args)))
+
+    builder.result()
   }
 
-  protected def instancesConfiguration: JobFlowInstancesConfig = {
+  protected def uploadBootstrapActionScript(contentOrFile: String, script: String): Unit = {
+    if (!script.startsWith("s3://")) throw new ConfigException(s"[$operatorName] `script` must start with 's3://' if uploading content as bootstrap action.")
+    val s3Uri = AmazonS3URI(script)
+    val content = Try(workspace.templateFile(templateEngine, workspace.getFile(contentOrFile).getPath, UTF_8, params)).getOrElse(contentOrFile)
+    logger.info(s"[$operatorName] Upload content to $script. (content hash (MurmurHash3): ${MurmurHash3.bytesHash(content.getBytes, 1234)})")
+    withS3(_.putObject(s3Uri.getBucket, s3Uri.getKey, content))
+  }
+
+  protected def buildRunIfBootstrapAction(condition: String, name: String, script: String, args: Seq[String]): Seq[BootstrapActionConfig] = {
+    val builder = Seq.newBuilder[BootstrapActionConfig]
+    new URI(script) match {
+      case uri if uri.getScheme.contentEquals("file") =>
+        builder += new BootstrapActionConfig()
+          .withName(s"$name if $condition")
+          .withScriptBootstrapAction(
+            new ScriptBootstrapActionConfig()
+              .withPath(RUN_IF_SCRIPT_LOCATION)
+              .withArgs(Seq(condition, uri.getPath) ++ args: _*)
+          )
+      case uri if uri.getScheme.contentEquals("s3") =>
+        // NOTE: `run-if` script provided by EMR has a bug: https://github.com/aws-samples/emr-bootstrap-actions/pull/211
+        //       so, download script first, then execute it.
+        val localFileName: String = s"digdag-${params.get("session_uuid", classOf[String])}-${Random.alphanumeric.take(10).mkString}"
+        builder += new BootstrapActionConfig()
+          .withName(s"$name if $condition: Download $script as /tmp/$localFileName")
+          .withScriptBootstrapAction(
+            new ScriptBootstrapActionConfig()
+              .withPath(RUN_IF_SCRIPT_LOCATION)
+              .withArgs(Seq(condition, "aws", "s3", "cp", script, s"/tmp/$localFileName"): _*)
+          )
+        builder += new BootstrapActionConfig()
+          .withName(s"$name if $condition: chmod 755 /tmp/$localFileName ($script)")
+          .withScriptBootstrapAction(
+            new ScriptBootstrapActionConfig()
+              .withPath(RUN_IF_SCRIPT_LOCATION)
+              .withArgs(Seq(condition, "chmod", "755", s"/tmp/$localFileName"): _*)
+          )
+        builder += new BootstrapActionConfig()
+          .withName(s"$name if $condition: Execute /tmp/$localFileName ($script)")
+          .withScriptBootstrapAction(
+            new ScriptBootstrapActionConfig()
+              .withPath(RUN_IF_SCRIPT_LOCATION)
+              .withArgs(Seq(condition, s"/tmp/$localFileName") ++ args: _*)
+          )
+      case _ =>
+        throw new ConfigException(s"[$operatorName] Invalid bootstrap action path, must be a location in Amazon S3 or a local path starting with 'file:'.")
+    }
+    builder.result()
+  }
+
+  protected def configureInstances: JobFlowInstancesConfig = {
     val c = new JobFlowInstancesConfig()
 
     if (masterSecurityGroups.nonEmpty) {
@@ -207,7 +272,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     if (subnetIds.nonEmpty) c.setEc2SubnetIds(seqAsJavaList(subnetIds))
 
     val instanceTypeConfigsBuilder = Seq.newBuilder[InstanceFleetConfig]
-    instanceTypeConfigsBuilder += masterFleetConfiguration
+    instanceTypeConfigsBuilder += configureMasterFleet
     instanceTypeConfigsBuilder += configureSlaveFleet(CORE, coreFleet)
     if (!taskFleet.isEmpty) instanceTypeConfigsBuilder += configureSlaveFleet(TASK, taskFleet)
     c.setInstanceFleets(seqAsJavaList(instanceTypeConfigsBuilder.result()))
@@ -222,7 +287,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     new RunJobFlowRequest()
       .withAdditionalInfo(additionalInfo.orNull)
       .withApplications(applications.map(a => new Application().withName(a)): _*)
-      .withBootstrapActions(bootstrapActions.map(configureBootstrapAction): _*)
+      .withBootstrapActions(bootstrapActions.flatMap(configureBootstrapAction): _*)
       .withConfigurations(applicationConfigurations.map(configureApplicationConfiguration): _*)
       .withCustomAmiId(customAmiId.orNull)
       .withJobFlowRole(instanceProfile)
@@ -233,14 +298,15 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
       .withServiceRole(serviceRole)
       .withTags(tags.toSeq.map(m => new Tag().withKey(m._1).withValue(m._2)): _*)
       .withVisibleToAllUsers(isVisible)
-      .withInstances(instancesConfiguration)
+      .withInstances(configureInstances)
   }
 
   override def runTask(): TaskResult = {
+    val req = buildCreateClusterRequest
     val r = withEmr { emr =>
-      emr.runJobFlow(buildCreateClusterRequest)
+      emr.runJobFlow(req)
     }
-    logger.info(s"""[$operatorName] The request to create a cluster is accepted: ${r.getJobFlowId}""")
+    logger.info(s"""[$operatorName] The request to create a cluster is accepted: ${r.getJobFlowId}, request: $req""")
 
     val p = newEmptyParams
     p.getNestedOrSetEmpty("emr_fleet").getNestedOrSetEmpty("last_cluster").set("id", r.getJobFlowId)
