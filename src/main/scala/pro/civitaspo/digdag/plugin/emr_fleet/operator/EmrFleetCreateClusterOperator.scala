@@ -226,18 +226,25 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
         //       so, download script first, then execute it.
         val localFileName: String = s"digdag-${params.get("session_uuid", classOf[String])}-${Random.alphanumeric.take(10).mkString}"
         builder += new BootstrapActionConfig()
-          .withName(s"$name if $condition: Download $script as $localFileName")
+          .withName(s"$name if $condition: Download $script as /tmp/$localFileName")
           .withScriptBootstrapAction(
             new ScriptBootstrapActionConfig()
               .withPath(RUN_IF_SCRIPT_LOCATION)
-              .withArgs(Seq(condition, "aws", "s3", "cp", script, s"./$localFileName"): _*)
+              .withArgs(Seq(condition, "aws", "s3", "cp", script, s"/tmp/$localFileName"): _*)
           )
         builder += new BootstrapActionConfig()
-          .withName(s"$name if $condition: Execute $localFileName ($script)")
+          .withName(s"$name if $condition: chmod 755 /tmp/$localFileName ($script)")
           .withScriptBootstrapAction(
             new ScriptBootstrapActionConfig()
               .withPath(RUN_IF_SCRIPT_LOCATION)
-              .withArgs(Seq(condition, s"./$localFileName") ++ args: _*)
+              .withArgs(Seq(condition, "chmod", "755", s"/tmp/$localFileName"): _*)
+          )
+        builder += new BootstrapActionConfig()
+          .withName(s"$name if $condition: Execute /tmp/$localFileName ($script)")
+          .withScriptBootstrapAction(
+            new ScriptBootstrapActionConfig()
+              .withPath(RUN_IF_SCRIPT_LOCATION)
+              .withArgs(Seq(condition, s"/tmp/$localFileName") ++ args: _*)
           )
       case _ =>
         throw new ConfigException(s"[$operatorName] Invalid bootstrap action path, must be a location in Amazon S3 or a local path starting with 'file:'.")

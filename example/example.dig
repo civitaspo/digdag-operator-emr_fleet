@@ -45,7 +45,7 @@ _export:
       script: s3://${WRITABLE_BUCKET}/echo.sh
       content: |
         #!/usr/bin/env bash
-        echo ${emr_fleet}
+        echo '${emr_fleet}'
     - name: echo 2
       script: s3://${WRITABLE_BUCKET}/echo.sh
       run_if: instance.isMaster=true
