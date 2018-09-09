@@ -35,6 +35,7 @@ import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
 import scala.util.{Random, Try}
+import scala.util.hashing.MurmurHash3
 
 class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends AbstractEmrFleetOperator(operatorName, context, systemConfig, templateEngine) {
@@ -205,6 +206,7 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     if (!script.startsWith("s3://")) throw new ConfigException(s"[$operatorName] `script` must start with 's3://' if uploading content as bootstrap action.")
     val s3Uri = AmazonS3URI(script)
     val content = Try(workspace.templateFile(templateEngine, workspace.getFile(contentOrFile).getPath, UTF_8, params)).getOrElse(contentOrFile)
+    logger.info(s"[$operatorName] Upload content to $script. (content hash (MurmurHash3): ${MurmurHash3.bytesHash(content.getBytes, 1234)})")
     withS3(_.putObject(s3Uri.getBucket, s3Uri.getKey, content))
   }
 
