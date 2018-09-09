@@ -293,10 +293,11 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
   }
 
   override def runTask(): TaskResult = {
+    val req = buildCreateClusterRequest
     val r = withEmr { emr =>
-      emr.runJobFlow(buildCreateClusterRequest)
+      emr.runJobFlow(req)
     }
-    logger.info(s"""[$operatorName] The request to create a cluster is accepted: ${r.getJobFlowId}""")
+    logger.info(s"""[$operatorName] The request to create a cluster is accepted: ${r.getJobFlowId}, request: $req""")
 
     val p = newEmptyParams
     p.getNestedOrSetEmpty("emr_fleet").getNestedOrSetEmpty("last_cluster").set("id", r.getJobFlowId)
