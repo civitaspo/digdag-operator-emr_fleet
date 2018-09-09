@@ -1,3 +1,9 @@
+0.0.5 (2018-09-09)
+==================
+
+* [New Feature] Add `content` option for bootstrap action that uploads content to `script` location.
+* [New Feature] Add `run_if` option for bootstrap action that wraps `run-if` script provided by EMR for easier use.
+
 0.0.4 (2018-08-09)
 ==================
 

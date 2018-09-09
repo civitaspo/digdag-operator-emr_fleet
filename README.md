@@ -16,7 +16,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-emr_fleet:0.0.4
+      - pro.civitaspo:digdag-operator-emr_fleet:0.0.5
   emr_fleet:
     auth_method: profile
 
@@ -143,7 +143,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **master_fleet**: Describes the EC2 instances and instance configurations for master node that use the instance fleet configuration. (map, required)
   - **name**: The friendly name of the instance fleet. (string, default: `master instance fleet`)
   - **use_spot_instance**: Indicates whether master node uses Spot instance or On-Demand instance. (boolean, default: `true`)
-  - **default_bid_percentage**: The bid price, as a percentage of On-Demand price, for each EC2 Spot instance as defined by **instance_type**. Expressed as a number (for example, 20 specifies 20%). This value is used for **candidates**'s **bid_percentage** default value. (double, default: `100.0`)
+  - **bid_percentage**: The bid price, as a percentage of On-Demand price, for each EC2 Spot instance as defined by **instance_type**. Expressed as a number (for example, 20 specifies 20%). This value is used for **candidates**'s **bid_percentage** default value. (double, default: `100.0`)
   - **candidates**: An instance type configuration for each instance type in an instance fleet, which determines the EC2 instances Amazon EMR attempts to provision to fulfill On-Demand and Spot target capacities. There can be a maximum of 5 instance type configurations in a fleet. (array of map, required)
     - **bid_price**: The bid price for each EC2 Spot instance type as defined by **instance_type**. Expressed in USD. If neither **bid_price** nor **bid_percentage** is provided, **bid_percentage** defaults to 100%. (string, optional)
     - **bid_percentage**: The bid price, as a percentage of On-Demand price, for each EC2 Spot instance as defined by **instance_type**. Expressed as a number (for example, 20 specifies 20%). If neither **bid_price** nor **bid_percentage** is provided, **bid_percentage** defaults to 100%. (double, default: `${master_fleet.bid_percentage}`)
@@ -193,8 +193,10 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - **configurations**: A list of additional configurations to apply within a configuration object. (array of this configurations object, optional)
 - **bootstrap_actions**: A list of bootstrap actions to run before Hadoop starts on the cluster nodes. (array of map, optional)
   - **name**: The name of the bootstrap action. (string, required)
-  - **script**: The script location to run during a bootstrap action. Can be either a location in Amazon S3 or on a local file system. (string, required)
+  - **script**: The script location to run during a bootstrap action. Can be either a location in Amazon S3 or on a local file system of EMR Servers. (string, required)
   - **args**: A list of command line arguments to pass to the bootstrap action script. (array of string, default: `[]`)
+  - **content**: The script content or local file location for the content. If this option is defined, write the content into the **script** object on S3. (string, optional)
+  - **run_if**: Specify the condition if the bootstrap action should be run conditionally. The condition format is the same as `s3://elasticmapreduce/bootstrap-actions/run-if`. See [Doc](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-plan-bootstrap.html#emr-bootstrap-runif) (string, optional)
 - **keep_alive_when_no_steps**: Specifies whether the cluster should remain available after completing all steps. (boolean, default: `true`)
 - **termination_protected**: Specifies whether to lock the cluster to prevent the Amazon EC2 instances from being terminated by API call, user intervention, or in the event of a job-flow error. (boolean, default: `false`)
 - **wait_available_state**: Specifies whether to wait until the cluster becomes available after created. Available state means `"RUNNING"` or `"WAITING"`. (boolean, default: `true`)

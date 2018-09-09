@@ -49,7 +49,7 @@ class EmrFleetWaitClusterOperator(operatorName: String, context: OperatorContext
       .withTimeout(timeoutDuration.getDuration)
       .withWaitGrowRate(1.0)
       .onGiveup { p: ParamInGiveup =>
-        logger.error(s"[${operatorName}] failed to wait cluster: ${p.firstException.getMessage}", p.firstException)
+        logger.error(s"[${operatorName}] failed to wait cluster: ${p.lastException.getMessage}", p.lastException)
       }
       .onRetry { p: ParamInRetry =>
         logger.info(s"[${operatorName}] polling ${p.e.getMessage} (next: ${p.retryCount}, total wait: ${p.totalWaitMillis} ms)")
