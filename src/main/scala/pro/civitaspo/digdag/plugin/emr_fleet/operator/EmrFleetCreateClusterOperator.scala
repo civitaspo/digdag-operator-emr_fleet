@@ -18,6 +18,7 @@ import com.amazonaws.services.elasticmapreduce.model.{
   PlacementType,
   RunJobFlowRequest,
   ScriptBootstrapActionConfig,
+  SpotProvisioningAllocationStrategy,
   SpotProvisioningSpecification,
   SpotProvisioningTimeoutAction,
   Tag,
@@ -78,6 +79,8 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     val blockDuration: Optional[DurationParam] = spotSpec.getOptional("block_duration", classOf[DurationParam])
     val timeoutAction: SpotProvisioningTimeoutAction = spotSpec.get("timeout_action", classOf[SpotProvisioningTimeoutAction], TERMINATE_CLUSTER)
     val timeoutDuration: DurationParam = spotSpec.get("timeout_duration", classOf[DurationParam], DurationParam.parse("45m"))
+    val allocationStrategy: Optional[SpotProvisioningAllocationStrategy] =
+      spotSpec.getOptional("allocation_strategy", classOf[SpotProvisioningAllocationStrategy])
 
     val s = new SpotProvisioningSpecification()
     if (blockDuration.isPresent) {
@@ -94,6 +97,9 @@ class EmrFleetCreateClusterOperator(operatorName: String, context: OperatorConte
     }
     s.setTimeoutAction(timeoutAction)
     s.setTimeoutDurationMinutes(timeoutDuration.getDuration.toMinutes.toInt)
+    if (allocationStrategy.isPresent) {
+      s.setAllocationStrategy(allocationStrategy.get())
+    }
 
     new InstanceFleetProvisioningSpecifications().withSpotSpecification(s)
   }
